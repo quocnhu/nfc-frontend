@@ -44,13 +44,14 @@ export const authOptions: NextAuthOptions = {
           role: data.role,
           permissions: data.mergedPermissions || [],
           jwt: jwtValue,
+          avatarUrl: data.user.avatarUrl || null,
         };
       },
     }),
   ],
   session: {
     strategy: "jwt",
-    maxAge: 15 * 60,
+    maxAge: 7 * 24 * 60 * 60,
   },
   pages: {
     signIn: "/login",
@@ -85,12 +86,16 @@ export const authOptions: NextAuthOptions = {
     },
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
         token.permissions = (user as any).permissions;
         token.jwt = (user as any).jwt;
+        token.avatarUrl = (user as any).avatarUrl || null;
+      }
+      if (trigger === 'update' && (session as any)?.avatarUrl) {
+        token.avatarUrl = (session as any).avatarUrl;
       }
       return token;
     },
@@ -99,7 +104,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub || (token as any).id || "";
         (session.user as any).role = (token as any).role || "";
         (session.user as any).permissions = (token as any).permissions ?? [];
-        (session as any).jwt = (token as any).jwt || "";
+        (session.user as any).jwt = (token as any).jwt || "";
+        (session.user as any).avatarUrl = (token as any).avatarUrl || null;
       }
       return session;
     },

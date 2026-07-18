@@ -1,11 +1,34 @@
 "use client";
 
-import { Form, Input, Button, Card, Typography, message } from "antd";
+import { Form, Input, Button, Card, Typography, message, Spin } from "antd";
 import { authApi } from "@/lib/api";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [messageApi, contextHolder] = message.useMessage();
+
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.replace("/profile");
+    }
+  }, [status, session, router]);
+
+  if (status === "loading") {
+    return (
+      <Card style={{ textAlign: "center", padding: "40px 0" }}>
+        <Spin size="large" />
+      </Card>
+    );
+  }
+
+  if (status === "authenticated") {
+    return null;
+  }
 
   const onFinish = async (values: { email: string }) => {
     try {

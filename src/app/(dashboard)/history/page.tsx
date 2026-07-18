@@ -43,6 +43,7 @@ function formatResourceName(resource?: string): string {
 export default function HistoryPage() {
   const [items, setItems] = useState<History[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 15 });
 
   useEffect(() => {
     historyApi
@@ -53,7 +54,7 @@ export default function HistoryPage() {
   }, []);
 
   const columns = [
-    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => i + 1 },
+    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => (pagination.current - 1) * pagination.pageSize + i + 1 },
     {
       title: "User",
       key: "user",
@@ -104,7 +105,7 @@ export default function HistoryPage() {
 
   return (
     <>
-      <Table loading={loading} columns={columns} dataSource={items} rowKey="id" pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (total) => `Total ${total} items` }} />
+      <Table loading={loading} columns={columns} dataSource={items} rowKey="id" scroll={{ x: "max-content" }} pagination={{ current: pagination.current, pageSize: pagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} items`, onChange: (page, size) => setPagination({ current: page, pageSize: size }) }} />
     </>
   );
 }

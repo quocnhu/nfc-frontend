@@ -26,3 +26,237 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* ─── NFC Login Background ─── */
+.nfc-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.nfc-bg::before,
+.nfc-bg::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.12;
+}
+
+.nfc-bg::before {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, #fff 0%, transparent 70%);
+  top: -150px;
+  right: -80px;
+  animation: nfc-pulse 8s ease-in-out infinite;
+}
+
+.nfc-bg::after {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #fff 0%, transparent 70%);
+  bottom: -120px;
+  left: -80px;
+  animation: nfc-pulse 8s ease-in-out infinite 4s;
+}
+
+/* Water ripples */
+.nfc-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+  animation: ripple 3.5s ease-out infinite;
+}
+
+.nfc-ripple:nth-child(2) { animation-delay: 0.9s; }
+.nfc-ripple:nth-child(3) { animation-delay: 1.8s; }
+.nfc-ripple:nth-child(4) { animation-delay: 2.7s; }
+
+/* Secondary ripples offset */
+.nfc-ripple-offset {
+  position: absolute;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+  animation: ripple-offset 4s ease-out infinite;
+}
+
+.nfc-ripple-offset:nth-child(5) {
+  top: 30%;
+  left: 25%;
+  animation-delay: 0.5s;
+}
+
+.nfc-ripple-offset:nth-child(6) {
+  top: 70%;
+  left: 75%;
+  animation-delay: 2s;
+}
+
+.nfc-ripple-offset:nth-child(7) {
+  top: 20%;
+  left: 80%;
+  animation-delay: 3.5s;
+}
+
+@keyframes ripple {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 1;
+    border-width: 4px;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    width: 700px;
+    height: 700px;
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+@keyframes ripple-offset {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.8;
+    border-width: 3px;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  100% {
+    width: 500px;
+    height: 500px;
+    opacity: 0;
+    border-width: 1px;
+    margin-left: -250px;
+    margin-top: -250px;
+  }
+}
+
+@keyframes nfc-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.12; }
+  50% { transform: scale(1.2); opacity: 0.22; }
+}
+
+/* ─── Profile Item Hover ─── */
+.profile-item {
+  transition: box-shadow 0.25s, border-color 0.25s, background 0.25s;
+  cursor: pointer;
+}
+
+.profile-item:hover {
+  box-shadow: 0 6px 24px rgba(79, 70, 229, 0.35);
+  border-color: #818cf8 !important;
+  background: rgba(79, 70, 229, 0.18) !important;
+}
+
+/* Mobile: touch feedback */
+@media (hover: none) {
+  .profile-item:active {
+    transform: scale(0.97);
+    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+  }
+}
+
+.vip-item {
+  transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+
+.vip-item:hover {
+  box-shadow: 0 6px 24px rgba(255, 176, 32, 0.3);
+  border-color: rgba(255, 176, 32, 0.6) !important;
+  background: rgba(255, 176, 32, 0.12) !important;
+}
+
+/* ─── Profile Page Ripples ─── */
+.profile-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.profile-ripple {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.08);
+  animation: profile-ripple 4.5s ease-out infinite;
+}
+
+.profile-ripple:nth-child(1) {
+  top: 20%;
+  left: 15%;
+  animation-delay: 0s;
+}
+
+.profile-ripple:nth-child(2) {
+  top: 65%;
+  left: 75%;
+  animation-delay: 1.2s;
+}
+
+.profile-ripple:nth-child(3) {
+  top: 40%;
+  left: 50%;
+  animation-delay: 2.4s;
+}
+
+.profile-ripple:nth-child(4) {
+  top: 80%;
+  left: 25%;
+  animation-delay: 3.6s;
+}
+
+.profile-ripple:nth-child(5) {
+  top: 10%;
+  left: 80%;
+  animation-delay: 0.8s;
+}
+
+.profile-ripple:nth-child(6) {
+  top: 55%;
+  left: 10%;
+  animation-delay: 2s;
+}
+
+@keyframes profile-ripple {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.7;
+    border-width: 3px;
+  }
+  50% { opacity: 0.25; }
+  100% {
+    width: 500px;
+    height: 500px;
+    margin-left: -250px;
+    margin-top: -250px;
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+/* ─── Table Hover ─── */
+.ant-table-row {
+  transition: background 0.2s;
+}
+
+.ant-table-row:hover > td {
+  background: rgba(79, 70, 229, 0.04) !important;
+}

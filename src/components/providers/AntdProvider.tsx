@@ -39,11 +39,11 @@ export function AntdProvider({ children }: { children: React.ReactNode }) {
             colorPrimary: "#4f46e5",
             borderRadius: 8,
             colorBgContainer: isDark ? "#1e1e2e" : "#ffffff",
-            colorBgLayout: isDark ? "#121220" : "#f5f5f7",
+            colorBgLayout: isDark ? "#121220" : "#f0f2f5",
             colorBgElevated: isDark ? "#252536" : "#ffffff",
-            colorBorder: isDark ? "#2e2e40" : "#e5e5ea",
-            colorText: isDark ? "#e0e0e8" : "#1d1d1f",
-            colorTextSecondary: isDark ? "#a0a0b0" : "#6e6e73",
+            colorBorder: isDark ? "#2e2e40" : "#e0e0e6",
+            colorText: isDark ? "#e0e0e8" : "#1a1a2e",
+            colorTextSecondary: isDark ? "#a0a0b0" : "#555770",
             fontFamily:
               '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
           },
@@ -51,7 +51,7 @@ export function AntdProvider({ children }: { children: React.ReactNode }) {
             Layout: {
               headerBg: isDark ? "#1a1a2e" : "#ffffff",
               siderBg: isDark ? "#10101e" : "#001529",
-              bodyBg: isDark ? "#121220" : "#f5f5f7",
+              bodyBg: isDark ? "#121220" : "#f0f2f5",
             },
             Menu: {
               darkItemBg: isDark ? "#10101e" : "#001529",
@@ -65,7 +65,12 @@ export function AntdProvider({ children }: { children: React.ReactNode }) {
             },
             Table: {
               colorBgContainer: isDark ? "#1e1e2e" : "#ffffff",
-              headerBg: isDark ? "#252536" : "#fafafa",
+              headerBg: isDark ? "#252536" : "#4f46e5",
+              headerColor: isDark ? "#e0e0e8" : "#ffffff",
+              rowHoverBg: isDark ? "#252540" : "rgba(79, 70, 229, 0.04)",
+              borderColor: isDark ? "#2e2e40" : "#e8e8ee",
+              colorText: isDark ? "#e0e0e8" : "#1a1a2e",
+              colorTextSecondary: isDark ? "#a0a0b0" : "#555770",
             },
             Button: {
               primaryShadow: "0 2px 8px rgba(79, 70, 229, 0.3)",
@@ -73,6 +78,16 @@ export function AntdProvider({ children }: { children: React.ReactNode }) {
             Tabs: {
               inkBarColor: "#4f46e5",
               itemSelectedColor: "#4f46e5",
+            },
+            Input: {
+              activeBorderColor: "#4f46e5",
+              hoverBorderColor: "#7c7cf7",
+            },
+            Select: {
+              optionSelectedBg: "rgba(79, 70, 229, 0.08)",
+            },
+            Tag: {
+              borderRadiusSM: 6,
             },
           },
         }}

@@ -11,6 +11,7 @@ import {
   Avatar,
   Tooltip,
   Button,
+  Badge,
 } from "antd";
 import {
   UserOutlined,
@@ -24,12 +25,15 @@ import {
   EyeOutlined,
   ReloadOutlined,
   ClockCircleOutlined,
+  WarningOutlined,
+  LockOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { dashboardApi } from "@/lib/api";
 import { formatDateTime } from "@/utils/helpers";
 import { useSession } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
-import type { DashboardStats, History } from "@/types";
+import type { DashboardStats, History, SuspiciousActivity, SuspiciousAlert } from "@/types";
 
 const ACTION_CONFIG: Record<
   string,
@@ -121,18 +125,21 @@ export default function DashboardPage() {
   const { isDark } = useTheme();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<History[]>([]);
+  const [suspicious, setSuspicious] = useState<SuspiciousActivity | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const [statsRes, activityRes] = await Promise.all([
+      const [statsRes, activityRes, suspiciousRes] = await Promise.all([
         dashboardApi.stats(),
         dashboardApi.activity(20),
+        dashboardApi.suspicious().catch(() => null),
       ]);
       setStats(statsRes.data?.data || null);
       setActivity(activityRes.data?.data || []);
+      setSuspicious(suspiciousRes?.data?.data || null);
     } finally {
       setRefreshing(false);
       setInitialLoading(false);
@@ -147,7 +154,7 @@ export default function DashboardPage() {
     <>
       <Row gutter={[16, 16]}>
         {STAT_CARDS.map((card) => (
-          <Col xs={12} sm={8} lg={4} xl={4} key={card.key}>
+          <Col xs={12} sm={8} md={6} lg={4} xl={4} key={card.key}>
             <Card
               bordered={false}
               style={{
@@ -337,6 +344,80 @@ export default function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} lg={9}>
+          <Card
+            title={
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <WarningOutlined style={{ color: suspicious?.summary.alertsCount ? "#ef4444" : "#10b981" }} />
+                <span>Suspicious Activity</span>
+                {suspicious?.summary.alertsCount ? (
+                  <Badge count={suspicious.summary.alertsCount} style={{ backgroundColor: "#ef4444" }} />
+                ) : null}
+              </div>
+            }
+            bordered={false}
+            style={{
+              borderRadius: 12,
+              border: isDark ? "1px solid #2e2e40" : "1px solid #f0f0f0",
+              marginBottom: 16,
+            }}
+            bodyStyle={{ padding: 0 }}
+          >
+            {suspicious && (
+              <div style={{ padding: "12px 16px" }}>
+                <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+                  <div style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: suspicious.summary.failedLoginsLastHour > 0 ? "#ef4444" : "#10b981" }}>
+                      {suspicious.summary.failedLoginsLastHour}
+                    </div>
+                    <div style={{ fontSize: 11, color: isDark ? "#a0a0b0" : "#6e6e73" }}>Failed (1h)</div>
+                  </div>
+                  <div style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: "#10b981" }}>
+                      {suspicious.summary.successfulLoginsLastHour}
+                    </div>
+                    <div style={{ fontSize: 11, color: isDark ? "#a0a0b0" : "#6e6e73" }}>Success (1h)</div>
+                  </div>
+                </div>
+                {suspicious.alerts.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "16px 0", color: isDark ? "#a0a0b0" : "#6e6e73" }}>
+                    <SafetyCertificateOutlined style={{ fontSize: 28, color: "#10b981", marginBottom: 8, display: "block" }} />
+                    No suspicious activity detected
+                  </div>
+                ) : (
+                  <List
+                    dataSource={suspicious.alerts.slice(0, 5)}
+                    renderItem={(alert: SuspiciousAlert) => (
+                      <List.Item style={{ padding: "8px 16px", borderBottom: isDark ? "1px solid #2e2e40" : "1px solid #f0f0f0" }}>
+                        <List.Item.Meta
+                          avatar={
+                            <Avatar
+                              size={32}
+                              style={{
+                                backgroundColor: alert.severity === "high" ? "#ef4444" : alert.severity === "medium" ? "#f59e0b" : "#6b7280",
+                              }}
+                              icon={alert.type.includes("brute_force") ? <LockOutlined /> : alert.type === "permission_change" ? <SafetyOutlined /> : <DeleteOutlined />}
+                            />
+                          }
+                          title={
+                            <Typography.Text style={{ fontSize: 13 }}>
+                              {alert.message}
+                            </Typography.Text>
+                          }
+                          description={
+                            <Tooltip title={alert.timestamp}>
+                              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                {formatDateTime(alert.timestamp)}
+                              </Typography.Text>
+                            </Tooltip>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                )}
+              </div>
+            )}
+          </Card>
           <Card
             title="Your Permissions"
             bordered={false}

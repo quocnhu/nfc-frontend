@@ -11,12 +11,17 @@ import {
   SettingOutlined,
   BulbOutlined,
   HistoryOutlined,
+  FolderOpenOutlined,
+  QrcodeOutlined,
+  HomeOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useMemo, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
-import { useGlobalLoading } from "@/components/providers/AuthProvider";
+import { useAvatar } from "@/components/providers/AvatarProvider";
+
 
 const { Header, Sider, Content } = Layout;
 
@@ -39,10 +44,30 @@ const routeMap: Record<
     label: "Sharing",
     permission: "read:sharingcontent",
   },
+  "/folder": {
+    icon: <FolderOpenOutlined />,
+    label: "My Files",
+    permission: "",
+  },
+  "/qr": {
+    icon: <QrcodeOutlined />,
+    label: "QR Codes",
+    permission: "",
+  },
   "/history": {
     icon: <HistoryOutlined />,
     label: "History",
     permission: "read:history",
+  },
+  "/homepage": {
+    icon: <HomeOutlined />,
+    label: "Homepage",
+    permission: "read:dashboard",
+  },
+  "/payments": {
+    icon: <DollarOutlined />,
+    label: "Payments",
+    permission: "read:dashboard",
   },
   "/profile": { icon: <SettingOutlined />, label: "Profile", permission: "" },
 };
@@ -53,7 +78,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { isDark, toggle } = useTheme();
-  const { showLoading, hideLoading } = useGlobalLoading();
+  const { avatarUrl } = useAvatar();
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 992px)");
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => setCollapsed(e.matches);
+    handler(mq);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const user = session?.user;
 
@@ -74,9 +107,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [permissions]);
 
   const handleLogout = async () => {
-    showLoading();
     await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
+    await signOut({ redirect: false });
+    router.push("/login");
   };
 
   return (
@@ -196,24 +229,32 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               }}
               placement="bottomRight"
             >
-              <Avatar
-                style={{
-                  backgroundColor: "#4f46e5",
-                  cursor: "pointer",
-                  fontSize: 14,
-                  fontWeight: 600,
-                }}
-              >
-                {user?.name?.charAt(0)?.toUpperCase()}
-              </Avatar>
+              {avatarUrl ? (
+                <Avatar
+                  src={avatarUrl}
+                  style={{ cursor: "pointer" }}
+                />
+              ) : (
+                <Avatar
+                  style={{
+                    backgroundColor: "#4f46e5",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
+                  {user?.name?.charAt(0)?.toUpperCase()}
+                </Avatar>
+              )}
             </Dropdown>
           </Space>
         </Header>
 
         <Content
           style={{
-            margin: 20,
+            margin: collapsed ? 12 : 20,
             minHeight: "calc(100vh - 56px - 40px)",
+            transition: "margin 0.2s",
           }}
         >
           {children}

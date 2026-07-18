@@ -1,18 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Table, Button, Modal, Form, Input, Select, Space, Tabs, message,
-  Popconfirm, Tag, Checkbox, Typography, Divider,
+  Popconfirm, Tag, Checkbox, Typography, Divider, Upload, Avatar,
+  Slider, Switch,
 } from "antd";
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined,
-  KeyOutlined, SafetyOutlined, UserOutlined, TeamOutlined,
+  SafetyOutlined, UserOutlined, TeamOutlined,
+  CameraOutlined, CheckCircleOutlined, CloseCircleOutlined, PictureOutlined, ScissorOutlined,
+  RotateLeftOutlined, RotateRightOutlined, UnlockOutlined, ClockCircleOutlined,
 } from "@ant-design/icons";
-import { userApi, roleApi, permissionApi, dashboardApi } from "@/lib/api";
+import dynamic from "next/dynamic";
+import { userApi, roleApi, permissionApi, dashboardApi, userdataApi } from "@/lib/api";
+import { getCroppedImg } from "@/lib/cropImage";
+import { useAvatarSync } from "@/hooks/useAvatarSync";
 import type { User, Role, Permission } from "@/types";
 
+const Cropper = dynamic(() => import("react-easy-crop").then(mod => mod.default), { ssr: false });
+
 export default function UsersPage() {
+  const { uploadAvatarForUser, selectAvatar } = useAvatarSync();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -28,11 +37,6 @@ export default function UsersPage() {
   const [roleForm] = Form.useForm();
   const [selectedRolePerms, setSelectedRolePerms] = useState<string[]>([]);
 
-  // Password modal
-  const [pwModalOpen, setPwModalOpen] = useState(false);
-  const [pwTargetUser, setPwTargetUser] = useState<User | null>(null);
-  const [pwForm] = Form.useForm();
-
   // Individual permissions modal
   const [permModalOpen, setPermModalOpen] = useState(false);
   const [permTargetUser, setPermTargetUser] = useState<User | null>(null);
@@ -44,9 +48,30 @@ export default function UsersPage() {
   const [assignTargetRole, setAssignTargetRole] = useState<Role | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
+  // Avatar upload modal
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [avatarTargetUser, setAvatarTargetUser] = useState<User | null>(null);
+  const [avatarFileList, setAvatarFileList] = useState<any[]>([]);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarHistory, setAvatarHistory] = useState<{ name: string; url: string; path: string }[]>([]);
+
+  // Crop modal state
+  const [avatarCropModalOpen, setAvatarCropModalOpen] = useState(false);
+  const [avatarCropImage, setAvatarCropImage] = useState("");
+  const [avatarCrop, setAvatarCrop] = useState({ x: 0, y: 0 });
+  const [avatarZoom, setAvatarZoom] = useState(1);
+  const [avatarRotation, setAvatarRotation] = useState(0);
+  const [avatarCroppedAreaPixels, setAvatarCroppedAreaPixels] = useState<any>(null);
+  const [avatarPendingFile, setAvatarPendingFile] = useState<File | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [modalLoading, setModalLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [usersPagination, setUsersPagination] = useState({ current: 1, pageSize: 10 });
+  const [rolesPagination, setRolesPagination] = useState({ current: 1, pageSize: 10 });
+  const [permsPagination, setPermsPagination] = useState({ current: 1, pageSize: 10 });
 
   const getErrorMessage = (err: any): string => {
     const data = err?.response?.data;
@@ -83,10 +108,11 @@ export default function UsersPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [usersRes, rolesRes, permsRes] = await Promise.allSettled([
+      const [usersRes, rolesRes, permsRes, myPermsRes] = await Promise.allSettled([
         userApi.list({ page: 1, limit: 50 }),
         roleApi.list(),
         permissionApi.list(),
+        dashboardApi.permissions(),
       ]);
       if (usersRes.status === "fulfilled") {
         setUsers(usersRes.value.data?.data?.data || []);
@@ -104,6 +130,13 @@ export default function UsersPage() {
       } else {
         console.error("Failed to load permissions:", permsRes.reason);
       }
+      if (myPermsRes.status === "fulfilled") {
+        const permData = myPermsRes.value.data?.data;
+        setCurrentUserPermissions(permData?.mergedPermissions || []);
+        setCurrentUserId(permData?.user?.id || "");
+      } else {
+        console.error("Failed to load permissions:", myPermsRes.reason);
+      }
     } catch (err) {
       console.error("Failed to load data:", err);
       messageApi.error("Failed to load data");
@@ -111,6 +144,11 @@ export default function UsersPage() {
       setLoading(false);
     }
   };
+
+  const hasReadAll = currentUserPermissions.includes("read:user:all");
+  const hasUpdateUser = currentUserPermissions.includes("update:user");
+  const hasReadRole = currentUserPermissions.includes("read:role");
+  const hasReadPermission = currentUserPermissions.includes("read:permission");
 
   useEffect(() => { load(); }, []);
 
@@ -126,7 +164,13 @@ export default function UsersPage() {
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    userForm.setFieldsValue({ fullname: user.fullname });
+    const formData: any = { fullname: user.fullname, status: user.status || "ACTIVE" };
+    if (user.expiresAt) {
+      // Convert to datetime-local format (YYYY-MM-DDTHH:mm)
+      const date = new Date(user.expiresAt);
+      formData.expiresAt = date.toISOString().slice(0, 16);
+    }
+    userForm.setFieldsValue(formData);
     setUserModalOpen(true);
   };
 
@@ -144,12 +188,29 @@ export default function UsersPage() {
     }
   };
 
+  const handleUnlockUser = async (user: User) => {
+    try {
+      await userApi.unlock(user.id);
+      messageApi.success(`Account unlocked for ${user.fullname}`);
+      load();
+    } catch (err: any) {
+      messageApi.error(getErrorMessage(err));
+    }
+  };
+
   const handleUserSubmit = async () => {
     try {
       setModalLoading(true);
       const values = await userForm.validateFields();
       if (editingUser) {
-        await userApi.update({ id: editingUser.id, fullname: values.fullname });
+        const payload: any = { id: editingUser.id, fullname: values.fullname, status: values.status };
+        if (values.expiresAt) {
+          payload.expiresAt = new Date(values.expiresAt).toISOString();
+        } else {
+          payload.expiresAt = null; // Unlimited access
+        }
+        if (values.newPassword) payload.newPassword = values.newPassword;
+        await userApi.update(payload);
         messageApi.success("User updated");
       } else {
         await userApi.create({ email: values.email, password: values.password, fullname: values.fullname, roleId: values.roleId });
@@ -163,30 +224,8 @@ export default function UsersPage() {
         fullname: ["fullname", "Fullname"],
         email: ["email", "Email"],
         password: ["password", "Password"],
+        newPassword: ["newPassword", "Password"],
       });
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  // ─── Password Change ───
-
-  const handleOpenPw = (user: User) => {
-    setPwTargetUser(user);
-    pwForm.resetFields();
-    setPwModalOpen(true);
-  };
-
-  const handlePwSubmit = async () => {
-    try {
-      setModalLoading(true);
-      const values = await pwForm.validateFields();
-      await userApi.adminChangePassword({ id: pwTargetUser!.id, newPassword: values.newPassword });
-      messageApi.success(`Password changed for ${pwTargetUser!.fullname}`);
-      setPwModalOpen(false);
-    } catch (err: any) {
-      if (err?.errorFields) return;
-      messageApi.error(getErrorMessage(err));
     } finally {
       setModalLoading(false);
     }
@@ -313,9 +352,10 @@ export default function UsersPage() {
       const currentIds = users.filter((u) => u.roleId === assignTargetRole.id).map((u) => u.id);
       const toAdd = selectedUserIds.filter((id) => !currentIds.includes(id));
       const toRemove = currentIds.filter((id) => !selectedUserIds.includes(id));
+      const defaultRole = roles.find((r) => r.name === "USER");
       await Promise.all([
         ...toAdd.map((id) => userApi.update({ id, roleId: assignTargetRole.id })),
-        ...toRemove.map((id) => userApi.update({ id, roleId: "" })),
+        ...toRemove.map((id) => userApi.update({ id, roleId: defaultRole?.id || "" })),
       ]);
       messageApi.success(`Users updated for ${assignTargetRole.name}`);
       setRoleAssignModalOpen(false);
@@ -333,6 +373,80 @@ export default function UsersPage() {
     );
   };
 
+  // ─── Avatar Upload (with crop) ───
+
+  const handleOpenAvatarUpload = async (user: User) => {
+    setAvatarTargetUser(user);
+    setAvatarFileList([]);
+    setAvatarHistory([]);
+    setAvatarModalOpen(true);
+    try {
+      const res = await userdataApi.listAdminAvatars(user.id);
+      setAvatarHistory(res.data?.data || []);
+    } catch {
+      setAvatarHistory([]);
+    }
+  };
+
+  /** Select an existing avatar as active */
+  const handleSelectExistingAvatar = async (filename: string) => {
+    if (!avatarTargetUser) return;
+    try {
+      await selectAvatar(avatarTargetUser.id, filename);
+      messageApi.success(`Avatar updated for ${avatarTargetUser.fullname}`);
+      setAvatarModalOpen(false);
+      load();
+    } catch (err: any) {
+      messageApi.error(getErrorMessage(err));
+    }
+  };
+
+  /** Called when user selects a file inside the avatar modal dragger */
+  const handleAvatarFileSelect = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setAvatarCropImage(url);
+    setAvatarPendingFile(file);
+    setAvatarCrop({ x: 0, y: 0 });
+    setAvatarZoom(1);
+    setAvatarRotation(0);
+    setAvatarModalOpen(false); // close the file picker, open crop
+    setAvatarCropModalOpen(true);
+  };
+
+  const onAvatarCropComplete = useCallback((_: any, croppedPixels: any) => {
+    setAvatarCroppedAreaPixels(croppedPixels);
+  }, []);
+
+  /** Confirm crop → upload the cropped blob */
+  const handleAvatarCropConfirm = async () => {
+    if (!avatarPendingFile || !avatarCroppedAreaPixels || !avatarTargetUser) return;
+
+    try {
+      const { blob } = await getCroppedImg(avatarCropImage, avatarCroppedAreaPixels, 512, 512);
+      const croppedFile = new File([blob], avatarPendingFile.name, { type: "image/jpeg" });
+
+      setAvatarCropModalOpen(false);
+      setAvatarUploading(true);
+
+      const uploadedUrl = await uploadAvatarForUser(avatarTargetUser.id, croppedFile);
+      messageApi.success(`Avatar updated for ${avatarTargetUser.fullname}`);
+      load();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Upload failed";
+      messageApi.error(Array.isArray(msg) ? msg.join(", ") : msg);
+    } finally {
+      setAvatarUploading(false);
+      setAvatarPendingFile(null);
+      URL.revokeObjectURL(avatarCropImage);
+    }
+  };
+
+  const handleAvatarCropCancel = () => {
+    setAvatarCropModalOpen(false);
+    setAvatarPendingFile(null);
+    URL.revokeObjectURL(avatarCropImage);
+  };
+
   // ─── Grouped permissions ───
 
   const permGroups = permissions.reduce((acc, p) => {
@@ -346,7 +460,21 @@ export default function UsersPage() {
   // ─── Columns ───
 
   const userColumns = [
-    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => i + 1 },
+    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => (usersPagination.current - 1) * usersPagination.pageSize + i + 1 },
+    {
+      title: "Avatar",
+      key: "avatar",
+      width: 70,
+      render: (_: any, record: User) => (
+        record.avatarUrl ? (
+          <Avatar size={40} src={record.avatarUrl} shape="circle" style={{ cursor: "pointer" }} />
+        ) : (
+          <Avatar size={40} shape="circle" style={{ backgroundColor: "#4f46e5", fontSize: 14, fontWeight: 600 }}>
+            {record.fullname?.charAt(0)?.toUpperCase()}
+          </Avatar>
+        )
+      ),
+    },
     { title: "Fullname", dataIndex: "fullname", key: "fullname", filterSearch: true,
       filters: [...new Set(users.map((u) => u.fullname))].map((n) => ({ text: n, value: n })),
       onFilter: (value: any, record: User) => record.fullname.includes(value),
@@ -371,28 +499,108 @@ export default function UsersPage() {
       key: "verified",
       filters: [{ text: "Verified", value: true }, { text: "Not Verified", value: false }],
       onFilter: (value: any, record: User) => record.isEmailVerified === value,
-      render: (_: any, record: User) => record.isEmailVerified ? "✅" : "❌",
+      render: (_: any, record: User) => record.isEmailVerified
+        ? <Tag color="green" icon={<CheckCircleOutlined />}>Verified</Tag>
+        : <Tag color="red" icon={<CloseCircleOutlined />}>Not Verified</Tag>,
+    },
+    {
+      title: "Status",
+      key: "status",
+      filters: [{ text: "Active", value: "active" }, { text: "Not Active", value: "notactive" }, { text: "Locked", value: "locked" }, { text: "NFC Expired", value: "nfcexpired" }, { text: "NFC Disabled", value: "disabled" }],
+      onFilter: (value: any, record: User) => {
+        const isLocked = record.lockedUntil && new Date(record.lockedUntil) > new Date();
+        const isNfcExpired = record.expiresAt && new Date(record.expiresAt) < new Date();
+        const isNfcDisabled = record.status === "DISABLED";
+        if (value === "locked") return !!isLocked;
+        if (value === "notactive") return !isLocked && !record.isEmailVerified;
+        if (value === "nfcexpired") return !isLocked && record.isEmailVerified && !!isNfcExpired;
+        if (value === "disabled") return !isLocked && record.isEmailVerified && isNfcDisabled;
+        return !isLocked && record.isEmailVerified && !isNfcExpired && !isNfcDisabled;
+      },
+      render: (_: any, record: User) => {
+        const isLocked = record.lockedUntil && new Date(record.lockedUntil) > new Date();
+        const isNfcExpired = record.expiresAt && new Date(record.expiresAt) < new Date();
+        const isNfcDisabled = record.status === "DISABLED";
+        if (isLocked) {
+          return <Tag color="red" icon={<LockOutlined />}>Locked</Tag>;
+        }
+        if (!record.isEmailVerified) {
+          return <Tag color="orange" icon={<CloseCircleOutlined />}>Not Active</Tag>;
+        }
+        if (isNfcDisabled) {
+          return <Tag color="red" icon={<CloseCircleOutlined />}>NFC Disabled</Tag>;
+        }
+        if (isNfcExpired) {
+          return <Tag color="orange" icon={<ClockCircleOutlined />}>NFC Expired</Tag>;
+        }
+        return <Tag color="green" icon={<CheckCircleOutlined />}>Active</Tag>;
+      },
+    },
+    {
+      title: "NFC Expires",
+      key: "expiresAt",
+      render: (_: any, record: User) => {
+        if (!record.expiresAt) {
+          return <Typography.Text type="secondary">-</Typography.Text>;
+        }
+        const expiresAt = new Date(record.expiresAt);
+        const now = new Date();
+        const daysRemaining = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const isExpired = expiresAt < now;
+        return (
+          <div>
+            <Typography.Text style={{ color: isExpired ? "#ff4d4f" : daysRemaining <= 7 ? "#faad14" : "#52c41a" }}>
+              {expiresAt.toLocaleDateString()}
+            </Typography.Text>
+            <br />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {isExpired ? "Expired" : `${daysRemaining} days left`}
+            </Typography.Text>
+          </div>
+        );
+      },
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_: any, record: User) => (
-        <Space size="small">
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} title="Edit" />
-          <Button size="small" icon={<KeyOutlined />} onClick={() => handleOpenPw(record)} title="Change Password" />
-          <Button size="small" icon={<SafetyOutlined />} onClick={() => handleOpenPerms(record)} title="Individual Permissions" />
-          {record.role?.name !== "ADMIN" && (
-            <Popconfirm title="Delete user?" onConfirm={() => handleDeleteUser(record)}>
-              <Button size="small" danger icon={<DeleteOutlined />} title="Delete" />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      render: (_: any, record: User) => {
+        if (hasReadAll) {
+          const isLocked = record.lockedUntil && new Date(record.lockedUntil) > new Date();
+          return (
+            <Space size="small">
+              <Button size="small" icon={<CameraOutlined />} onClick={() => handleOpenAvatarUpload(record)} title="Upload Avatar" />
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} title="Edit" />
+              <Button size="small" icon={<SafetyOutlined />} onClick={() => handleOpenPerms(record)} title="Individual Permissions" />
+              {isLocked && (
+                <Popconfirm title="Unlock this account?" onConfirm={() => handleUnlockUser(record)}>
+                  <Button size="small" icon={<UnlockOutlined />} title="Unlock" />
+                </Popconfirm>
+              )}
+              {record.role?.name !== "ADMIN" && (
+                <Popconfirm title="Delete user?" onConfirm={() => handleDeleteUser(record)}>
+                  <Button size="small" danger icon={<DeleteOutlined />} title="Delete" />
+                </Popconfirm>
+              )}
+            </Space>
+          );
+        }
+        if (record.id === currentUserId) {
+          return (
+            <Space size="small">
+              <Button size="small" icon={<CameraOutlined />} onClick={() => handleOpenAvatarUpload(record)} title="Upload Avatar" />
+              {hasUpdateUser && (
+                <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} title="Edit" />
+              )}
+            </Space>
+          );
+        }
+        return null;
+      },
     },
   ];
 
   const roleColumns = [
-    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => i + 1 },
+    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => (rolesPagination.current - 1) * rolesPagination.pageSize + i + 1 },
     { title: "Role", dataIndex: "name", key: "name", filterSearch: true,
       filters: roles.map((r) => ({ text: r.name, value: r.name })),
       onFilter: (value: any, record: Role) => record.name === value,
@@ -426,7 +634,7 @@ export default function UsersPage() {
   ];
 
   const permColumns = [
-    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => i + 1 },
+    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => (permsPagination.current - 1) * permsPagination.pageSize + i + 1 },
     { title: "Permission", dataIndex: "name", key: "name", filterSearch: true,
       filters: permissions.map((p) => ({ text: p.name, value: p.name })),
       onFilter: (value: any, record: Permission) => record.name.includes(value),
@@ -444,30 +652,53 @@ export default function UsersPage() {
             label: "Users",
             children: (
               <>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateUser} style={{ marginBottom: 16 }}>
-                  Create User
-                </Button>
-                <Table loading={loading} columns={userColumns} dataSource={users} rowKey="id" pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `Total ${total} users` }} />
+                {hasReadAll && (
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateUser} style={{ marginBottom: 16 }}>
+                    Create User
+                  </Button>
+                )}
+                <Table loading={loading} columns={userColumns} dataSource={users} rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: usersPagination.current, pageSize: usersPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} users`, onChange: (page, size) => setUsersPagination({ current: page, pageSize: size }) }} />
               </>
             ),
           },
-          {
-            key: "roles",
-            label: "Roles",
-            children: (
-              <>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateRole} style={{ marginBottom: 16 }}>
-                  Create Role
-                </Button>
-                <Table loading={loading} columns={roleColumns} dataSource={roles} rowKey="id" pagination={false} />
-              </>
-            ),
-          },
-          {
-            key: "permissions",
-            label: "Permissions",
-            children: <Table loading={loading} columns={permColumns} dataSource={permissions} rowKey="id" pagination={false} />,
-          },
+          ...(hasReadAll
+            ? [
+                {
+                  key: "roles",
+                  label: "Roles",
+                  children: (
+                    <>
+                      <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateRole} style={{ marginBottom: 16 }}>
+                        Create Role
+                      </Button>
+                      <Table loading={loading} columns={roleColumns} dataSource={roles} rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: rolesPagination.current, pageSize: rolesPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} roles`, onChange: (page, size) => setRolesPagination({ current: page, pageSize: size }) }} />
+                    </>
+                  ),
+                },
+                {
+                  key: "permissions",
+                  label: "Permissions",
+                  children: <Table loading={loading} columns={permColumns} dataSource={permissions} key="permissions" rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: permsPagination.current, pageSize: permsPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} permissions`, onChange: (page, size) => setPermsPagination({ current: page, pageSize: size }) }} />,
+                },
+              ]
+            : [
+                ...(hasReadRole
+                  ? [{
+                      key: "roles",
+                      label: "Roles",
+                      children: (
+                        <Table loading={loading} columns={roleColumns} dataSource={roles} key="roles-view" rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: rolesPagination.current, pageSize: rolesPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} roles`, onChange: (page, size) => setRolesPagination({ current: page, pageSize: size }) }} />
+                      ),
+                    }]
+                  : []),
+                ...(hasReadPermission
+                  ? [{
+                      key: "permissions",
+                      label: "Permissions",
+                      children: <Table loading={loading} columns={permColumns} dataSource={permissions} key="permissions-view" rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: permsPagination.current, pageSize: permsPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} permissions`, onChange: (page, size) => setPermsPagination({ current: page, pageSize: size }) }} />,
+                    }]
+                  : []),
+              ]),
         ]}
       />
 
@@ -497,42 +728,51 @@ export default function UsersPage() {
               </Form.Item>
             </>
           )}
+          {editingUser && (
+            <>
+              <Divider style={{ margin: "12px 0" }}>NFC Service Status</Divider>
+              <Form.Item name="status" label="Status">
+                <Select
+                  options={[
+                    { label: "Active (Unlimited)", value: "ACTIVE" },
+                    { label: "Disabled", value: "DISABLED" },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item name="expiresAt" label="Expiration Date">
+                <Input
+                  type="datetime-local"
+                  placeholder="Leave empty for unlimited access"
+                />
+              </Form.Item>
+              <Divider style={{ margin: "12px 0" }}>Change Password (optional)</Divider>
+              <Form.Item name="newPassword" label="New Password" rules={[{ min: 6, message: "Password must be at least 6 characters" }]}>
+                <Input.Password prefix={<LockOutlined />} placeholder="Leave empty to keep current" />
+              </Form.Item>
+              <Form.Item
+                name="confirmNewPassword"
+                label="Confirm New Password"
+                dependencies={["newPassword"]}
+                rules={[
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value && !getFieldValue("newPassword")) return Promise.resolve();
+                      if (!value) return Promise.reject(new Error("Please confirm the new password"));
+                      if (getFieldValue("newPassword") === value) return Promise.resolve();
+                      return Promise.reject(new Error("Passwords do not match"));
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password prefix={<LockOutlined />} placeholder="Re-enter new password" />
+              </Form.Item>
+            </>
+          )}
           {!editingUser && (
             <Form.Item name="roleId" label="Role" rules={[{ required: true, message: "Please select a role" }]}>
               <Select options={roles.map((r) => ({ label: r.name, value: r.id }))} />
             </Form.Item>
           )}
-        </Form>
-      </Modal>
-
-      {/* ─── Password Modal ─── */}
-      <Modal
-        title={`Change Password — ${pwTargetUser?.fullname}`}
-        open={pwModalOpen}
-        onOk={handlePwSubmit}
-        confirmLoading={modalLoading}
-        onCancel={() => setPwModalOpen(false)}
-      >
-        <Form form={pwForm} layout="vertical">
-          <Form.Item name="newPassword" label="New Password" rules={[{ required: true, min: 6 }]}>
-            <Input.Password prefix={<KeyOutlined />} />
-          </Form.Item>
-          <Form.Item
-            name="confirmPassword"
-            label="Confirm"
-            dependencies={["newPassword"]}
-            rules={[
-              { required: true },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue("newPassword") === value) return Promise.resolve();
-                  return Promise.reject(new Error("Passwords do not match"));
-                },
-              }),
-            ]}
-          >
-            <Input.Password prefix={<KeyOutlined />} />
-          </Form.Item>
         </Form>
       </Modal>
 
@@ -544,6 +784,7 @@ export default function UsersPage() {
         confirmLoading={modalLoading}
         onCancel={() => setPermModalOpen(false)}
         width={650}
+        style={{ maxWidth: '90vw' }}
       >
         <Space style={{ marginBottom: 16 }}>
           <Tag color="blue">From Role (fixed)</Tag>
@@ -584,6 +825,7 @@ export default function UsersPage() {
         confirmLoading={modalLoading}
         onCancel={() => setRoleModalOpen(false)}
         width={650}
+        style={{ maxWidth: '90vw' }}
       >
         <Form form={roleForm} layout="vertical">
           <Form.Item name="name" label="Role Name" rules={[{ required: true }]}>
@@ -617,6 +859,7 @@ export default function UsersPage() {
         confirmLoading={modalLoading}
         onCancel={() => setRoleAssignModalOpen(false)}
         width={520}
+        style={{ maxWidth: '90vw' }}
       >
         <Typography.Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
           Select users to assign to this role. Users currently assigned to other roles will be moved.
@@ -666,6 +909,145 @@ export default function UsersPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* ─── Avatar Upload Modal (picker + history) ─── */}
+      <Modal
+        title={`Avatar — ${avatarTargetUser?.fullname || ""}`}
+        open={avatarModalOpen}
+        onCancel={() => setAvatarModalOpen(false)}
+        footer={null}
+        width={560}
+        style={{ maxWidth: '90vw' }}
+      >
+        {avatarTargetUser && (
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            {avatarTargetUser.avatarUrl ? (
+              <Avatar src={avatarTargetUser.avatarUrl} size={80} />
+            ) : (
+              <Avatar size={80} style={{ backgroundColor: "#4f46e5", fontSize: 28, fontWeight: 600 }}>
+                {avatarTargetUser.fullname?.charAt(0)?.toUpperCase()}
+              </Avatar>
+            )}
+            <div style={{ marginTop: 8, fontSize: 13, color: "#6e6e73" }}>Current avatar</div>
+          </div>
+        )}
+
+        {/* Upload new */}
+        <Upload.Dragger
+          accept=".jpg,.jpeg,.png"
+          multiple={false}
+          fileList={[]}
+          beforeUpload={(file) => {
+            if (file instanceof File) handleAvatarFileSelect(file);
+            return false;
+          }}
+          showUploadList={false}
+          style={{ marginBottom: avatarHistory.length > 0 ? 16 : 0 }}
+        >
+          <p className="ant-upload-drag-icon">
+            <PictureOutlined style={{ color: "#4f46e5" }} />
+          </p>
+          <p className="ant-upload-text">Upload a new avatar</p>
+          <p className="ant-upload-hint">JPEG or PNG, max 3MB. You&apos;ll crop it before upload.</p>
+        </Upload.Dragger>
+
+        {/* Previous avatars */}
+        {avatarHistory.length > 0 && (
+          <div>
+            <Typography.Text strong style={{ display: "block", marginBottom: 10, fontSize: 13 }}>
+              Previous Avatars
+            </Typography.Text>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 10 }}>
+              {avatarHistory.map((av) => {
+                const isActive = avatarTargetUser?.avatarUrl?.includes(av.name);
+                return (
+                  <div
+                    key={av.name}
+                    onClick={() => handleSelectExistingAvatar(av.name)}
+                    style={{
+                      position: "relative",
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      border: isActive ? "2px solid #4f46e5" : "2px solid transparent",
+                      transition: "border-color 0.15s",
+                    }}
+                  >
+                    <img
+                      src={av.url}
+                      alt={av.name}
+                      style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }}
+                    />
+                    {isActive && (
+                      <div style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        background: "#4f46e5",
+                        borderRadius: "50%",
+                        width: 22,
+                        height: 22,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}>
+                        <CheckCircleOutlined style={{ color: "#fff", fontSize: 12 }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ─── Avatar Crop Modal ─── */}
+      <Modal
+        title={<Space><ScissorOutlined /> Crop Avatar</Space>}
+        open={avatarCropModalOpen}
+        onOk={handleAvatarCropConfirm}
+        onCancel={handleAvatarCropCancel}
+        confirmLoading={avatarUploading}
+        okText="Upload Cropped"
+        width={520}
+        style={{ maxWidth: '90vw' }}
+        styles={{ body: { padding: 0 } }}
+      >
+        <div style={{ position: "relative", width: "100%", height: "clamp(250px, 50vw, 400px)", background: "#1a1a2e" }}>
+          {avatarCropImage && (
+            // @ts-expect-error react-easy-crop types
+            <Cropper
+              image={avatarCropImage}
+              crop={avatarCrop}
+              zoom={avatarZoom}
+              rotation={avatarRotation}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setAvatarCrop}
+              onZoomChange={setAvatarZoom}
+              onCropComplete={onAvatarCropComplete}
+              style={{ containerStyle: { borderRadius: 8 } }}
+            />
+          )}
+        </div>
+        <div style={{ padding: "12px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+            <RotateLeftOutlined style={{ color: "#a0a0b0" }} />
+            <Typography.Text style={{ minWidth: 40, textAlign: "center", fontSize: 13 }}>{avatarRotation}°</Typography.Text>
+            <Slider min={0} max={360} value={avatarRotation} onChange={setAvatarRotation} style={{ flex: 1 }} />
+            <RotateRightOutlined style={{ color: "#a0a0b0" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Typography.Text style={{ fontSize: 13 }}>Zoom</Typography.Text>
+            <Slider min={1} max={3} step={0.1} value={avatarZoom} onChange={setAvatarZoom} style={{ flex: 1 }} />
+          </div>
+          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+            Output: 512×512 JPEG. Drag to position, scroll to zoom.
+          </Typography.Text>
+        </div>
       </Modal>
     </>
   );

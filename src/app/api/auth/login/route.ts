@@ -2,7 +2,8 @@ import { encode } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-const SESSION_MAX_AGE = 15 * 60;
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
+const REFRESH_MAX_AGE = 7 * 24 * 60 * 60;
 
 export async function POST(req: Request) {
   const { email, password } = await req.json();
@@ -22,10 +23,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message || "Login failed" }, { status: signinRes.status });
   }
 
-  const backendSetCookie = signinRes.headers.get("set-cookie");
+  const rawCookies = signinRes.headers.getSetCookie();
+
+  let jwtValue = "";
+  let refreshTokenValue = "";
+
+  for (const cookie of rawCookies) {
+    const pair = cookie.split(";")[0].trim();
+    const eqIdx = pair.indexOf("=") ;
+    const name = pair.substring(0, eqIdx).trim();
+    const value = pair.substring(eqIdx + 1).trim();
+    if (name === "jwt") jwtValue = value;
+    if (name === "refresh_token") refreshTokenValue = value;
+  }
 
   const permRes = await fetch(`${BACKEND_URL}/dashboard/permissions`, {
-    headers: { Cookie: backendSetCookie?.split(";")[0] || "" },
+    headers: { Cookie: `jwt=${jwtValue}` },
   });
 
   const permData = await permRes.json();
@@ -57,16 +70,21 @@ export async function POST(req: Request) {
     maxAge: SESSION_MAX_AGE,
   });
 
-  if (backendSetCookie) {
-    const cookiePair = backendSetCookie.split(";")[0];
-    const eqIndex = cookiePair.indexOf("=");
-    const name = cookiePair.substring(0, eqIndex).trim();
-    const value = cookiePair.substring(eqIndex + 1).trim();
-    response.cookies.set(name, value, {
+  if (jwtValue) {
+    response.cookies.set("jwt", jwtValue, {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: SESSION_MAX_AGE,
+      maxAge: 15 * 60,
+    });
+  }
+
+  if (refreshTokenValue) {
+    response.cookies.set("refresh_token", refreshTokenValue, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: REFRESH_MAX_AGE,
     });
   }
 

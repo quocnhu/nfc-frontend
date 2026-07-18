@@ -1,15 +1,28 @@
 "use client";
 
-import { Layout } from "antd";
-
-const { Content } = Layout;
-
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Layout style={{ minHeight: "100vh", justifyContent: "center", alignItems: "center", background: "#f0f2f5" }}>
-      <Content style={{ width: "100%", maxWidth: 400, padding: 24 }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        position: "relative",
+      }}
+    >
+      <div className="nfc-bg">
+        <div className="nfc-ripple" />
+        <div className="nfc-ripple" />
+        <div className="nfc-ripple" />
+        <div className="nfc-ripple" />
+        <div className="nfc-ripple-offset" />
+        <div className="nfc-ripple-offset" />
+        <div className="nfc-ripple-offset" />
+      </div>
+      <div style={{ width: "100%", maxWidth: 420, padding: 24, position: "relative", zIndex: 1 }}>
         {children}
-      </Content>
-    </Layout>
+      </div>
+    </div>
   );
 }

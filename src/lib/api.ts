@@ -9,6 +9,12 @@ import type {
   History,
   DashboardStats,
   UserPermissions,
+  Folder,
+  UploadedFile,
+  QRCode,
+  SuspiciousActivity,
+  Payment,
+  PaymentStatus,
 } from "@/types";
 
 export const authApi = {
@@ -21,6 +27,12 @@ export const authApi = {
     api.post<ApiResponse>("/auth/request-reset-password", data),
   resetPassword: (data: { token: string; email: string; newPassword: string }) =>
     api.post<ApiResponse>("/auth/reset-password", data),
+  registrationStatus: () =>
+    api.get<ApiResponse<{ enabled: boolean }>>("/auth/registration-status"),
+  verifyEmail: (data: { token: string; email: string }) =>
+    api.post<ApiResponse>("/auth/verify-email", data),
+  resendVerification: (data: { email: string }) =>
+    api.post<ApiResponse>("/auth/resend-verification", data),
 };
 
 export const userApi = {
@@ -29,7 +41,7 @@ export const userApi = {
   getMe: () => api.get<ApiResponse<User>>("/users/me"),
   create: (data: { email: string; password: string; fullname: string; roleId?: string }) =>
     api.post<ApiResponse<User>>("/users", data),
-  update: (data: { id: string; email?: string; fullname?: string; roleId?: string }) =>
+  update: (data: { id: string; email?: string; fullname?: string; roleId?: string; newPassword?: string; avatarUrl?: string; isEmailVerified?: boolean }) =>
     api.post<ApiResponse<User>>("/users/update", data),
   remove: (id: string) =>
     api.post<ApiResponse>("/users/delete", { id }),
@@ -41,6 +53,8 @@ export const userApi = {
     api.post<ApiResponse>("/users/admin-change-password", data),
   assignPermissions: (id: string, permissionIds: string[]) =>
     api.post<ApiResponse>("/users/assign-permissions", { id, permissionIds }),
+  unlock: (id: string) =>
+    api.post<ApiResponse>("/users/unlock", { id }),
 };
 
 export const roleApi = {
@@ -68,7 +82,7 @@ export const sharingApi = {
   myContent: () => api.get<ApiResponse<SharingContent[]>>("/sharing-content/me"),
   getOne: (id: string) =>
     api.post<ApiResponse<SharingContent>>("/sharing-content/get", { id }),
-  create: (data: { url: string; itemName: string; icon: string }) =>
+  create: (data: { url: string; itemName: string; icon: string; targetUserId?: string }) =>
     api.post<ApiResponse<SharingContent>>("/sharing-content", data),
   update: (data: { id: string; url?: string; itemName?: string; icon?: string }) =>
     api.post<ApiResponse<SharingContent>>("/sharing-content/update", data),
@@ -96,16 +110,172 @@ export const dashboardApi = {
   usersByRole: () => api.get<ApiResponse<any[]>>("/dashboard/users-by-role"),
   activity: (limit?: number) =>
     api.get<ApiResponse<History[]>>("/dashboard/activity", { params: { limit } }),
+  suspicious: () =>
+    api.get<ApiResponse<SuspiciousActivity>>("/dashboard/suspicious"),
 };
 
-export const avatarApi = {
-  upload: (file: File) => {
+export const uploadApi = {
+  upload: (folder: string, files: File[]) => {
     const form = new FormData();
-    form.append("file", file);
-    return api.post<ApiResponse<{ avatarUrl: string }>>("/avatar/upload", form, {
-      headers: { "Content-Type": "multipart/form-data" },
+    files.forEach((f) => form.append('files', f));
+    return api.post<ApiResponse<{ uploaded: { url: string; filename: string; size: number; folder: string }[]; errors: string[] }>>(
+      `/upload/${folder}`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  },
+  listFiles: (folder: string) =>
+    api.get<ApiResponse<UploadedFile[]>>(`/upload/list/${folder}`),
+  deleteFile: (folder: string, filename: string) =>
+    api.delete<ApiResponse>(`/upload/${folder}/${filename}`),
+  listFolders: () => api.get<ApiResponse<Folder[]>>('/upload/folders'),
+  createFolder: (data: { name: string; displayName: string; description?: string }) =>
+    api.post<ApiResponse<Folder>>('/upload/folders', data),
+  deleteFolder: (name: string) =>
+    api.delete<ApiResponse>(`/upload/folders/${name}`),
+  listIcons: () =>
+    api.get<ApiResponse<{ name: string; url: string; path: string; size: number; created_at: string }[]>>('/upload/icons'),
+};
+
+export const userdataApi = {
+  uploadAvatar: (file: File, onProgress?: (percent: number) => void) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post<ApiResponse<{ avatarUrl: string }>>('/upload/userdata/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (onProgress && e.total) {
+          onProgress(Math.round((e.loaded * 100) / e.total));
+        }
+      },
     });
   },
-  get: () => api.get<ApiResponse<{ avatarUrl: string | null }>>("/avatar/me"),
-  remove: () => api.delete<ApiResponse>("/avatar/me"),
+  uploadFiles: (files: File[], onProgress?: (percent: number) => void, path?: string) => {
+    const form = new FormData();
+    files.forEach((f) => form.append('files', f));
+    if (path) form.append('path', path);
+    return api.post<ApiResponse<{ uploaded: { url: string; filename: string; size: number; folder: string }[]; errors: string[] }>>(
+      '/upload/userdata/files',
+      form,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          if (onProgress && e.total) {
+            onProgress(Math.round((e.loaded * 100) / e.total));
+          }
+        },
+      },
+    );
+  },
+  listFiles: () =>
+    api.get<ApiResponse<UploadedFile[]>>('/upload/userdata'),
+  browse: (path: string) =>
+    api.get<ApiResponse<{ currentPath: string; items: any[] }>>('/upload/userdata/browse', { params: { path } }),
+  deleteFile: (filename: string, path?: string) =>
+    api.delete<ApiResponse>('/upload/userdata', { data: { filename, path } }),
+  adminUploadAvatar: (userId: string, file: File, onProgress?: (percent: number) => void) => {
+    const form = new FormData();
+    form.append('userId', userId);
+    form.append('file', file);
+    return api.post<ApiResponse<{ avatarUrl: string }>>('/upload/userdata/avatar/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (onProgress && e.total) {
+          onProgress(Math.round((e.loaded * 100) / e.total));
+        }
+      },
+    });
+  },
+  listAdminAvatars: (userId: string) =>
+    api.post<ApiResponse<{ name: string; url: string; path: string; size: number; created_at: string }[]>>(
+      '/upload/userdata/avatar/list',
+      { userId },
+    ),
+  selectAdminAvatar: (userId: string, filename: string) =>
+    api.post<ApiResponse<{ avatarUrl: string }>>(
+      '/upload/userdata/avatar/select',
+      { userId, filename },
+    ),
+  storageUsage: () =>
+    api.get<ApiResponse<{
+      usedBytes: number;
+      limitBytes: number;
+      usedMB: string;
+      limitMB: string;
+      percent: number;
+      isAdmin: boolean;
+    }>>('/upload/userdata/storage-usage'),
+  createFolder: (folderName: string, currentPath?: string) =>
+    api.post<ApiResponse<{ name: string; path: string }>>(
+      '/upload/userdata/folder',
+      { folderName, currentPath },
+    ),
+  deleteFolder: (folderPath: string) =>
+    api.delete<ApiResponse>('/upload/userdata/folder', { data: { folderPath } }),
+};
+
+export const qrApi = {
+  list: () =>
+    api.get<ApiResponse<QRCode[]>>('/qr'),
+  create: (data: { name: string; url: string }) =>
+    api.post<ApiResponse<QRCode>>('/qr', data),
+  remove: (id: string) =>
+    api.delete<ApiResponse>(`/qr/${id}`),
+};
+
+export const paymentApi = {
+  createOrder: () =>
+    api.post<ApiResponse<{ orderId: string; approveUrl: string }>>('/payment/create-order'),
+  capture: (orderId: string, payerId?: string) =>
+    api.post<ApiResponse>('/payment/capture', { orderId, payerId }),
+  myPayments: () =>
+    api.get<ApiResponse<Payment[]>>('/payment/my-payments'),
+  allPayments: () =>
+    api.get<ApiResponse<Payment[]>>('/payment/all'),
+  status: () =>
+    api.get<ApiResponse<PaymentStatus>>('/payment/status'),
+  publicStatus: (userId: string) =>
+    api.get<ApiResponse<PaymentStatus>>(`/payment/public-status/${userId}`),
+};
+
+export interface HomepageImage {
+  name: string;
+  url: string;
+  path?: string;
+  size?: number;
+  created_at?: string;
+}
+
+export interface HomepageData {
+  avatar: string | null;
+  hapic: HomepageImage[];
+  slideshowpics: HomepageImage[];
+  tourguidepic: HomepageImage[];
+}
+
+export interface PublicHomepageData {
+  avatar: string | null;
+  slideshowpics: HomepageImage[];
+  tourguidepic: HomepageImage[];
+}
+
+export const homepageApi = {
+  getPublic: () =>
+    api.get<ApiResponse<PublicHomepageData>>('/upload/homepage/public'),
+  getAdmin: () =>
+    api.get<ApiResponse<HomepageData>>('/upload/homepage/data'),
+  setup: () =>
+    api.post<ApiResponse>('/upload/homepage/setup'),
+  upload: (folder: string, file: File) => {
+    const form = new FormData();
+    form.append('folder', folder);
+    form.append('file', file);
+    return api.post<ApiResponse<{ url: string; filename: string; path: string; size: number; folder: string }>>(
+      '/upload/homepage/upload',
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  },
+  delete: (folder: string, filename: string) =>
+    api.delete<ApiResponse>('/upload/homepage/delete', { data: { folder, filename } }),
 };

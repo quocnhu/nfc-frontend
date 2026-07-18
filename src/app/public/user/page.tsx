@@ -1,89 +1,135 @@
 "use client";
 
-import { useState } from "react";
-import { Card, Input, Button, Typography, List, Space, Spin, Alert } from "antd";
-import { LinkOutlined, SearchOutlined } from "@ant-design/icons";
-import { sharingApi } from "@/lib/api";
-import type { SharingContent } from "@/types";
-
-interface PublicProfile {
-  user: { id: string; fullname: string; email: string };
-  items: SharingContent[];
-}
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Flex, Spin, Input, Button, Typography, Space, Card, Result } from "antd";
+import { SearchOutlined, LockOutlined, DollarOutlined } from "@ant-design/icons";
+import { sharingApi, paymentApi } from "@/lib/api";
+import VipTemplate from "@/components/templates/VipTemplate";
+import UserTemplate from "@/components/templates/UserTemplate";
+import type { PaymentStatus } from "@/types";
 
 export default function PublicUserPage() {
-  const [userId, setUserId] = useState("");
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [userId, setUserId] = useState(searchParams.get("userId") || "");
+  const [data, setData] = useState<any>(null);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSearch = async () => {
-    if (!userId.trim()) return;
+  const fetchProfile = async (id: string) => {
+    if (!id.trim()) return;
     setLoading(true);
     setError(null);
-    setProfile(null);
+    setData(null);
+    setPaymentStatus(null);
     try {
-      const res = await sharingApi.publicByUser(userId.trim());
-      if (res.data?.data) {
-        setProfile(res.data.data);
+      const [profileRes, paymentRes] = await Promise.all([
+        sharingApi.publicByUser(id.trim()),
+        paymentApi.publicStatus(id.trim()),
+      ]);
+      const profile = profileRes.data?.data;
+      const payment = paymentRes.data?.data;
+      if (profile) {
+        setData(profile);
+        if (payment) {
+          setPaymentStatus(payment);
+        }
       } else {
-        setError("User not found");
+        router.replace("/");
       }
     } catch {
-      setError("User not found or server error");
+      router.replace("/");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    const paramId = searchParams.get("userId");
+    if (paramId) {
+      setUserId(paramId);
+      fetchProfile(paramId);
+    }
+  }, []);
+
+  if (loading) {
+    return (
+      <Flex justify="center" align="center" style={{ minHeight: "100vh", background: "#f0f2f5" }}>
+        <Spin size="large" />
+      </Flex>
+    );
+  }
+
+  if (data) {
+    // Check if user is eligible (active and not expired)
+    if (paymentStatus && !paymentStatus.isActive) {
+      return (
+        <div style={{ minHeight: "100vh", background: "#f0f2f5", display: "flex", justifyContent: "center", alignItems: "center", padding: 24 }}>
+          <Card style={{ maxWidth: 500, width: "100%" }}>
+            <Result
+              icon={<LockOutlined style={{ color: "#faad14" }} />}
+              title="NFC Service Expired"
+              subTitle={
+                paymentStatus.status === "DISABLED"
+                  ? "This NFC service has been disabled. Please contact the owner to renew."
+                  : paymentStatus.daysRemaining <= 0
+                  ? "This NFC service has expired. Please login to renew your service."
+                  : `This NFC service will expire in ${paymentStatus.daysRemaining} days.`
+              }
+              extra={
+                <Button
+                  type="primary"
+                  icon={<DollarOutlined />}
+                  onClick={() => router.push("/renew")}
+                  size="large"
+                >
+                  Renew NFC Service - $2/year
+                </Button>
+              }
+            />
+          </Card>
+        </div>
+      );
+    }
+
+    const role = data.role?.name || data.user?.role?.name || "USER";
+    if (role === "VIP") {
+      return <VipTemplate user={data} items={data.sharingContent || []} />;
+    }
+    return <UserTemplate user={data} items={data.sharingContent || []} />;
+  }
+
   return (
-    <div style={{ maxWidth: 600, margin: "60px auto", padding: 24 }}>
-      <Typography.Title level={2} style={{ textAlign: "center" }}>
-        Public User Profile
-      </Typography.Title>
-      <Typography.Paragraph style={{ textAlign: "center", color: "#999" }}>
-        Enter a user UUID to view their sharing content
-      </Typography.Paragraph>
-
-      <Space.Compact style={{ width: "100%", marginBottom: 24 }}>
-        <Input
-          placeholder="Enter user UUID"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          onPressEnter={handleSearch}
-        />
-        <Button
-          type="primary"
-          icon={<SearchOutlined />}
-          onClick={handleSearch}
-          loading={loading}
-        >
-          Search
-        </Button>
-      </Space.Compact>
-
-      {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} />}
-
-      {profile && (
-        <Card title={profile.user.fullname}>
-          <Typography.Paragraph type="secondary">{profile.user.email}</Typography.Paragraph>
-          <List
-            dataSource={profile.items}
-            renderItem={(item) => (
-              <List.Item>
-                <List.Item.Meta
-                  title={item.itemName}
-                  description={
-                    <Typography.Link href={item.url} target="_blank">
-                      <LinkOutlined /> {item.url}
-                    </Typography.Link>
-                  }
-                />
-              </List.Item>
-            )}
+    <div style={{ minHeight: "100vh", background: "#f0f2f5", display: "flex", justifyContent: "center", alignItems: "center", padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
+        <Typography.Title level={3} style={{ marginBottom: 8 }}>NFC Tap Profile</Typography.Title>
+        <Typography.Text type="secondary" style={{ display: "block", marginBottom: 24 }}>
+          Enter a user ID to view their profile
+        </Typography.Text>
+        <Space.Compact style={{ width: "100%" }}>
+          <Input
+            placeholder="Enter user ID"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            onPressEnter={() => fetchProfile(userId)}
           />
-        </Card>
-      )}
+          <Button
+            type="primary"
+            icon={<SearchOutlined />}
+            onClick={() => fetchProfile(userId)}
+            loading={loading}
+          >
+            View
+          </Button>
+        </Space.Compact>
+        {error && (
+          <Typography.Text type="danger" style={{ display: "block", marginTop: 12 }}>
+            {error}
+          </Typography.Text>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,109 @@
+Sharing Tab - RBAC Permissions for Actions
+==========================================
+
+WHAT WAS DONE:
+- Users with update:sharingcontent permission can see Edit button on their own content
+- Users with delete:sharingcontent permission can see Delete button on their own content
+- Admin (read:sharingcontent:all) can edit/delete ANY user's content
+- Non-admin users can only edit/delete content they created (ownership check)
+
+HOW IT WORKS:
+1. Frontend loads merged permissions from /permissions endpoint
+2. Sets canUpdate, canDelete, hasReadAll, currentUserId states
+3. Actions column checks per row: isOwner = record.userId === currentUserId
+4. canEdit = hasReadAll || (canUpdate && isOwner)
+5. canRemove = hasReadAll || (canDelete && isOwner)
+
+BACKEND CHANGES:
+- sharing-content.service.ts: update() and remove() accept hasReadAll param
+- sharing-content.controller.ts: checks read:sharingcontent:all permission before calling service
+- If hasReadAll = true, ownership check is skipped
+
+SEED PERMISSIONS (for reference):
+- read:sharingcontent:all  → ADMIN only (sees all records)
+- create:sharingcontent    → Create new sharing content
+- update:sharingcontent    → Edit sharing content (own only)
+- delete:sharingcontent    → Delete sharing content (own only)
+
+ASSIGNING PERMISSIONS TO A ROLE:
+- Go to Roles tab → Assign Users → select user
+- Or edit a role → add/update permissions
+- Users get their role permissions + any individual permissions
+
+KEY FILES:
+- frontend: src/app/(dashboard)/sharing-content/page.tsx
+- backend:  src/sharing-content/sharing-content.controller.ts
+- backend:  src/sharing-content/sharing-content.service.ts
+
+OTHER RBAC FEATURES BUILT:
+- createdBy tracking on User, Role, Permission, SharingContent models
+- :all permissions (read:user:all, read:history:all, read:sharingcontent:all) for admin
+- Backend filters data by userId for non-admin users
+- Self-protection: cannot delete yourself, cannot change your own email via admin endpoint
+- Individual permissions modal shows role (fixed) vs individual (editable) permissions
+- Users tab hides Create/Roles/Permissions tabs for non-admin
+- Sharing tab shows Create button only for users with create:sharingcontent
+
+==========================================
+Password Change in Update Modal
+==========================================
+
+- Non-admin users can change their own password via Edit modal
+- Admin can change any user's password via Edit modal
+- Optional fields: "New Password" + "Confirm New Password"
+- Leave empty to keep current password
+- Backend: UpdateUserDto has optional newPassword field, service hashes it
+- Removed separate password modal (consolidated into edit)
+
+KEY FILES:
+- frontend: src/app/(dashboard)/users/page.tsx
+- backend:  src/user/dto/user.dto.ts (UpdateUserDto.newPassword)
+- backend:  src/user/user.service.ts (update() handles password hashing)
+
+==========================================
+Styling Updates
+==========================================
+
+LOGIN PAGE:
+- Animated water ripple background (purple gradient)
+- Centered card with gradient QN logo
+- Gradient Sign In button
+
+TABLE STYLING:
+- Light mode: indigo (#4f46e5) table headers with white text
+- Row hover: subtle indigo tint
+- Better contrast: darker text, stronger borders
+- Input/Select focus uses indigo primary color
+
+KEY FILES:
+- frontend: src/app/globals.css (ripple animations, table hover)
+- frontend: src/app/(auth)/layout.tsx (NFC background)
+- frontend: src/app/(auth)/login/page.tsx (card design)
+- frontend: src/components/providers/AntdProvider.tsx (theme tokens)
+
+==========================================
+Public Profile Templates
+==========================================
+
+- Backend findPublicByUser returns role.name for template routing
+- VIP users get VipTemplate (dark theatrical theme, spotlight beams, ripple avatar)
+- USER users get UserTemplate (clean light theme, indigo accents)
+- Admin users are BLOCKED from public profile (returns 404)
+- Items auto-open: URLs→new tab, emails→mailto, phones→tel
+- Public route: /public/user?userId=<uuid>
+
+SEED DATA:
+- Admin (4 items): YouTube, TikTok, Email, LinkedIn
+- Demo/USER (5 items): Facebook, Instagram, Email, Phone, GitHub
+- VIP (7 items): YouTube, TikTok, Facebook, Instagram, LinkedIn, Email, Phone
+
+TEST URLS:
+- Admin:  /public/user?userId=36fbfc30-345a-4ced-bfad-4dca98eff298 (BLOCKED - 404)
+- Demo:   /public/user?userId=11045596-1df9-482c-8ca6-07f7033c424c
+- VIP:    /public/user?userId=810a7c77-3d51-4193-8965-ba1d28177b29
+
+KEY FILES:
+- frontend: src/components/templates/VipTemplate.tsx
+- frontend: src/components/templates/UserTemplate.tsx
+- frontend: src/app/public/user/page.tsx
+- backend:  src/sharing-content/sharing-content.service.ts (findPublicByUser blocks ADMIN)

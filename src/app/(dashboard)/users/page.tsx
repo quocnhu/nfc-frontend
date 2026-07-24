@@ -4,16 +4,17 @@ import { useEffect, useState, useCallback } from "react";
 import {
   Table, Button, Modal, Form, Input, Select, Space, Tabs, message,
   Popconfirm, Tag, Checkbox, Typography, Divider, Upload, Avatar,
-  Slider, Switch,
+  Slider, Switch, Tooltip,
 } from "antd";
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined,
   SafetyOutlined, UserOutlined, TeamOutlined,
   CameraOutlined, CheckCircleOutlined, CloseCircleOutlined, PictureOutlined, ScissorOutlined,
-  RotateLeftOutlined, RotateRightOutlined, UnlockOutlined, ClockCircleOutlined,
+  RotateLeftOutlined, RotateRightOutlined, UnlockOutlined, StopOutlined, ClockCircleOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import dynamic from "next/dynamic";
-import { userApi, roleApi, permissionApi, dashboardApi, userdataApi } from "@/lib/api";
+import { userApi, roleApi, permissionApi, dashboardApi, userdataApi, paymentApi } from "@/lib/api";
 import { getCroppedImg } from "@/lib/cropImage";
 import { useAvatarSync } from "@/hooks/useAvatarSync";
 import type { User, Role, Permission } from "@/types";
@@ -54,6 +55,12 @@ export default function UsersPage() {
   const [avatarFileList, setAvatarFileList] = useState<any[]>([]);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarHistory, setAvatarHistory] = useState<{ name: string; url: string; path: string }[]>([]);
+
+  // Plan management modal
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [planTargetUser, setPlanTargetUser] = useState<User | null>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
 
   // Crop modal state
   const [avatarCropModalOpen, setAvatarCropModalOpen] = useState(false);
@@ -164,13 +171,7 @@ export default function UsersPage() {
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    const formData: any = { fullname: user.fullname, status: user.status || "ACTIVE" };
-    if (user.expiresAt) {
-      // Convert to datetime-local format (YYYY-MM-DDTHH:mm)
-      const date = new Date(user.expiresAt);
-      formData.expiresAt = date.toISOString().slice(0, 16);
-    }
-    userForm.setFieldsValue(formData);
+    userForm.setFieldsValue({ fullname: user.fullname });
     setUserModalOpen(true);
   };
 
@@ -198,18 +199,22 @@ export default function UsersPage() {
     }
   };
 
+  const handleToggleStatus = async (user: User) => {
+    try {
+      await userApi.toggleStatus(user.id);
+      messageApi.success(`Status updated for ${user.fullname}`);
+      load();
+    } catch (err: any) {
+      messageApi.error(getErrorMessage(err));
+    }
+  };
+
   const handleUserSubmit = async () => {
     try {
       setModalLoading(true);
       const values = await userForm.validateFields();
       if (editingUser) {
-        const payload: any = { id: editingUser.id, fullname: values.fullname, status: values.status };
-        if (values.expiresAt) {
-          payload.expiresAt = new Date(values.expiresAt).toISOString();
-        } else {
-          payload.expiresAt = null; // Unlimited access
-        }
-        if (values.newPassword) payload.newPassword = values.newPassword;
+        const payload: any = { id: editingUser.id, fullname: values.fullname };
         await userApi.update(payload);
         messageApi.success("User updated");
       } else {
@@ -447,6 +452,41 @@ export default function UsersPage() {
     URL.revokeObjectURL(avatarCropImage);
   };
 
+  // ─── Plan Management ───
+
+  const handleOpenPlanModal = async (user: User) => {
+    setPlanTargetUser(user);
+    try {
+      const [plansRes, statusRes] = await Promise.all([
+        paymentApi.plans(),
+        paymentApi.userSubscriptions(user.id),
+      ]);
+      setPlans(plansRes.data?.data || []);
+      const currentSub = statusRes.data?.data?.find((s: any) => s.isCurrent);
+      setSelectedPlanId(currentSub?.planId || "");
+    } catch (err) {
+      console.error("Failed to load plans:", err);
+      setPlans([]);
+    }
+    setPlanModalOpen(true);
+  };
+
+  const handleUpdatePlan = async () => {
+    if (!planTargetUser || !selectedPlanId) return;
+    
+    try {
+      setModalLoading(true);
+      await paymentApi.adminChangePlan(planTargetUser.id, selectedPlanId);
+      messageApi.success(`Plan updated for ${planTargetUser.fullname}`);
+      setPlanModalOpen(false);
+      load();
+    } catch (err: any) {
+      messageApi.error(getErrorMessage(err));
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   // ─── Grouped permissions ───
 
   const permGroups = permissions.reduce((acc, p) => {
@@ -460,11 +500,12 @@ export default function UsersPage() {
   // ─── Columns ───
 
   const userColumns = [
-    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => (usersPagination.current - 1) * usersPagination.pageSize + i + 1 },
+    { title: "#", key: "index", width: 60, align: 'center' as const, render: (_: any, __: any, i: number) => (usersPagination.current - 1) * usersPagination.pageSize + i + 1 },
     {
       title: "Avatar",
       key: "avatar",
       width: 70,
+      align: 'center' as const,
       render: (_: any, record: User) => (
         record.avatarUrl ? (
           <Avatar size={40} src={record.avatarUrl} shape="circle" style={{ cursor: "pointer" }} />
@@ -475,17 +516,18 @@ export default function UsersPage() {
         )
       ),
     },
-    { title: "Fullname", dataIndex: "fullname", key: "fullname", filterSearch: true,
+    { title: "Fullname", dataIndex: "fullname", key: "fullname", align: 'center' as const, filterSearch: true,
       filters: [...new Set(users.map((u) => u.fullname))].map((n) => ({ text: n, value: n })),
       onFilter: (value: any, record: User) => record.fullname.includes(value),
     },
-    { title: "Email", dataIndex: "email", key: "email", filterSearch: true,
+    { title: "Email", dataIndex: "email", key: "email", align: 'center' as const, filterSearch: true,
       filters: [...new Set(users.map((u) => u.email))].map((n) => ({ text: n, value: n })),
       onFilter: (value: any, record: User) => record.email.includes(value),
     },
     {
       title: "Role",
       key: "role",
+      align: 'center' as const,
       filters: [...new Set(users.map((u) => u.role?.name).filter(Boolean))].map((r) => ({ text: r!, value: r! })),
       onFilter: (value: any, record: User) => record.role?.name === value,
       render: (_: any, record: User) => (
@@ -497,6 +539,7 @@ export default function UsersPage() {
     {
       title: "Verified",
       key: "verified",
+      align: 'center' as const,
       filters: [{ text: "Verified", value: true }, { text: "Not Verified", value: false }],
       onFilter: (value: any, record: User) => record.isEmailVerified === value,
       render: (_: any, record: User) => record.isEmailVerified
@@ -506,63 +549,51 @@ export default function UsersPage() {
     {
       title: "Status",
       key: "status",
-      filters: [{ text: "Active", value: "active" }, { text: "Not Active", value: "notactive" }, { text: "Locked", value: "locked" }, { text: "NFC Expired", value: "nfcexpired" }, { text: "NFC Disabled", value: "disabled" }],
+      align: 'center' as const,
+      filters: [{ text: "Active", value: "active" }, { text: "Inactive", value: "inactive" }, { text: "Locked", value: "locked" }],
       onFilter: (value: any, record: User) => {
         const isLocked = record.lockedUntil && new Date(record.lockedUntil) > new Date();
-        const isNfcExpired = record.expiresAt && new Date(record.expiresAt) < new Date();
-        const isNfcDisabled = record.status === "DISABLED";
         if (value === "locked") return !!isLocked;
-        if (value === "notactive") return !isLocked && !record.isEmailVerified;
-        if (value === "nfcexpired") return !isLocked && record.isEmailVerified && !!isNfcExpired;
-        if (value === "disabled") return !isLocked && record.isEmailVerified && isNfcDisabled;
-        return !isLocked && record.isEmailVerified && !isNfcExpired && !isNfcDisabled;
+        if (value === "inactive") return !isLocked && record.status === "INACTIVE";
+        return !isLocked && record.status !== "INACTIVE";
       },
       render: (_: any, record: User) => {
         const isLocked = record.lockedUntil && new Date(record.lockedUntil) > new Date();
-        const isNfcExpired = record.expiresAt && new Date(record.expiresAt) < new Date();
-        const isNfcDisabled = record.status === "DISABLED";
         if (isLocked) {
           return <Tag color="red" icon={<LockOutlined />}>Locked</Tag>;
         }
-        if (!record.isEmailVerified) {
-          return <Tag color="orange" icon={<CloseCircleOutlined />}>Not Active</Tag>;
-        }
-        if (isNfcDisabled) {
-          return <Tag color="red" icon={<CloseCircleOutlined />}>NFC Disabled</Tag>;
-        }
-        if (isNfcExpired) {
-          return <Tag color="orange" icon={<ClockCircleOutlined />}>NFC Expired</Tag>;
+        if (record.status === "INACTIVE") {
+          return <Tag color="red" icon={<StopOutlined />}>Inactive</Tag>;
         }
         return <Tag color="green" icon={<CheckCircleOutlined />}>Active</Tag>;
       },
     },
     {
-      title: "NFC Expires",
-      key: "expiresAt",
-      render: (_: any, record: User) => {
-        if (!record.expiresAt) {
-          return <Typography.Text type="secondary">-</Typography.Text>;
+      title: "Plan",
+      key: "subscription",
+      width: 120,
+      align: 'center' as const,
+      render: (_: any, record: any) => {
+        const subscription = record.subscriptions?.[0];
+        if (!subscription || !subscription.plan) {
+          return <Tag color="default">No Plan</Tag>;
         }
-        const expiresAt = new Date(record.expiresAt);
-        const now = new Date();
-        const daysRemaining = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        const isExpired = expiresAt < now;
+        const planName = subscription.plan.displayName || subscription.plan.name;
+        const planColor = subscription.plan.name === "PROPLUS" ? "gold" : subscription.plan.name === "PRO" ? "blue" : "default";
         return (
-          <div>
-            <Typography.Text style={{ color: isExpired ? "#ff4d4f" : daysRemaining <= 7 ? "#faad14" : "#52c41a" }}>
-              {expiresAt.toLocaleDateString()}
+          <Space direction="vertical" size={0}>
+            <Tag color={planColor}>{planName}</Tag>
+            <Typography.Text style={{ fontSize: 11, color: "#6e6e73" }}>
+              {subscription.status}
             </Typography.Text>
-            <br />
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {isExpired ? "Expired" : `${daysRemaining} days left`}
-            </Typography.Text>
-          </div>
+          </Space>
         );
       },
     },
     {
       title: "Actions",
       key: "actions",
+      align: 'center' as const,
       render: (_: any, record: User) => {
         if (hasReadAll) {
           const isLocked = record.lockedUntil && new Date(record.lockedUntil) > new Date();
@@ -570,7 +601,23 @@ export default function UsersPage() {
             <Space size="small">
               <Button size="small" icon={<CameraOutlined />} onClick={() => handleOpenAvatarUpload(record)} title="Upload Avatar" />
               <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} title="Edit" />
+              <Button size="small" icon={<CrownOutlined />} onClick={() => handleOpenPlanModal(record)} title="Change Plan" />
               <Button size="small" icon={<SafetyOutlined />} onClick={() => handleOpenPerms(record)} title="Individual Permissions" />
+              {record.status === "INACTIVE" ? (
+                record.isEmailVerified ? (
+                  <Popconfirm title="Activate this user?" onConfirm={() => handleToggleStatus(record)}>
+                    <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#52c41a", borderColor: "#52c41a" }} title="Activate" />
+                  </Popconfirm>
+                ) : (
+                  <Tooltip title="Email not verified">
+                    <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#d9d9d9", borderColor: "#d9d9d9" }} disabled title="Email not verified" />
+                  </Tooltip>
+                )
+              ) : (
+                <Popconfirm title="Disable this user?" onConfirm={() => handleToggleStatus(record)}>
+                  <Button size="small" icon={<StopOutlined />} style={{ color: "#ff4d4f", borderColor: "#ff4d4f" }} title="Disable" />
+                </Popconfirm>
+              )}
               {isLocked && (
                 <Popconfirm title="Unlock this account?" onConfirm={() => handleUnlockUser(record)}>
                   <Button size="small" icon={<UnlockOutlined />} title="Unlock" />
@@ -600,14 +647,15 @@ export default function UsersPage() {
   ];
 
   const roleColumns = [
-    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => (rolesPagination.current - 1) * rolesPagination.pageSize + i + 1 },
-    { title: "Role", dataIndex: "name", key: "name", filterSearch: true,
+    { title: "#", key: "index", width: 60, align: 'center' as const, render: (_: any, __: any, i: number) => (rolesPagination.current - 1) * rolesPagination.pageSize + i + 1 },
+    { title: "Role", dataIndex: "name", key: "name", align: 'center' as const, filterSearch: true,
       filters: roles.map((r) => ({ text: r.name, value: r.name })),
       onFilter: (value: any, record: Role) => record.name === value,
     },
     {
       title: "Permissions",
       key: "permissions",
+      align: 'center' as const,
       render: (_: any, record: Role) => (
         <Typography.Text type="secondary">{record.permissions?.length || 0} permissions</Typography.Text>
       ),
@@ -615,6 +663,7 @@ export default function UsersPage() {
     {
       title: "Actions",
       key: "actions",
+      align: 'center' as const,
       render: (_: any, record: Role) => (
         <Space>
           {record.name !== "ADMIN" ? (
@@ -634,8 +683,8 @@ export default function UsersPage() {
   ];
 
   const permColumns = [
-    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => (permsPagination.current - 1) * permsPagination.pageSize + i + 1 },
-    { title: "Permission", dataIndex: "name", key: "name", filterSearch: true,
+    { title: "#", key: "index", width: 60, align: 'center' as const, render: (_: any, __: any, i: number) => (permsPagination.current - 1) * permsPagination.pageSize + i + 1 },
+    { title: "Permission", dataIndex: "name", key: "name", align: 'center' as const, filterSearch: true,
       filters: permissions.map((p) => ({ text: p.name, value: p.name })),
       onFilter: (value: any, record: Permission) => record.name.includes(value),
     },
@@ -730,21 +779,6 @@ export default function UsersPage() {
           )}
           {editingUser && (
             <>
-              <Divider style={{ margin: "12px 0" }}>NFC Service Status</Divider>
-              <Form.Item name="status" label="Status">
-                <Select
-                  options={[
-                    { label: "Active (Unlimited)", value: "ACTIVE" },
-                    { label: "Disabled", value: "DISABLED" },
-                  ]}
-                />
-              </Form.Item>
-              <Form.Item name="expiresAt" label="Expiration Date">
-                <Input
-                  type="datetime-local"
-                  placeholder="Leave empty for unlimited access"
-                />
-              </Form.Item>
               <Divider style={{ margin: "12px 0" }}>Change Password (optional)</Divider>
               <Form.Item name="newPassword" label="New Password" rules={[{ min: 6, message: "Password must be at least 6 characters" }]}>
                 <Input.Password prefix={<LockOutlined />} placeholder="Leave empty to keep current" />
@@ -1047,6 +1081,60 @@ export default function UsersPage() {
           <Typography.Text type="secondary" style={{ fontSize: 11 }}>
             Output: 512×512 JPEG. Drag to position, scroll to zoom.
           </Typography.Text>
+        </div>
+      </Modal>
+      {/* ─── Plan Management Modal ─── */}
+      <Modal
+        title={`Manage Plan — ${planTargetUser?.fullname || ""}`}
+        open={planModalOpen}
+        onOk={handleUpdatePlan}
+        confirmLoading={modalLoading}
+        onCancel={() => setPlanModalOpen(false)}
+        width={500}
+      >
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
+          Select a plan for this user.
+        </Typography.Paragraph>
+        
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {plans.map((plan) => {
+            const isSelected = selectedPlanId === plan.id;
+            const planColor = plan.name === "PROPLUS" ? "#faad14" : plan.name === "PRO" ? "#4f46e5" : "#6e6e73";
+            
+            return (
+              <div
+                key={plan.id}
+                onClick={() => setSelectedPlanId(plan.id)}
+                style={{
+                  padding: "16px",
+                  borderRadius: 12,
+                  border: `2px solid ${isSelected ? planColor : "#f0f0f0"}`,
+                  background: isSelected ? `${planColor}08` : "#fff",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                <Space style={{ width: "100%", justifyContent: "space-between" }}>
+                  <div>
+                    <Typography.Title level={5} style={{ margin: 0, color: planColor }}>
+                      {plan.displayName}
+                    </Typography.Title>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      {plan.description}
+                    </Typography.Text>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <Typography.Title level={4} style={{ margin: 0, color: planColor }}>
+                      ${plan.price.toFixed(2)}
+                    </Typography.Title>
+                    <Typography.Text style={{ fontSize: 11, color: "#6e6e73" }}>
+                      {plan.durationDays === 0 ? "30 min" : plan.durationDays <= 30 ? `${plan.durationDays} days` : `${plan.durationDays / 365} year(s)`}
+                    </Typography.Text>
+                  </div>
+                </Space>
+              </div>
+            );
+          })}
         </div>
       </Modal>
     </>

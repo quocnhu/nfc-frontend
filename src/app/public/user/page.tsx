@@ -1,20 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Flex, Spin, Input, Button, Typography, Space, Card, Result } from "antd";
-import { SearchOutlined, LockOutlined, DollarOutlined } from "@ant-design/icons";
-import { sharingApi, paymentApi } from "@/lib/api";
+import { SearchOutlined, LockOutlined, WarningOutlined } from "@ant-design/icons";
+import { sharingApi } from "@/lib/api";
 import VipTemplate from "@/components/templates/VipTemplate";
 import UserTemplate from "@/components/templates/UserTemplate";
-import type { PaymentStatus } from "@/types";
 
-export default function PublicUserPage() {
+function PublicUserContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [userId, setUserId] = useState(searchParams.get("userId") || "");
   const [data, setData] = useState<any>(null);
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,24 +21,22 @@ export default function PublicUserPage() {
     setLoading(true);
     setError(null);
     setData(null);
-    setPaymentStatus(null);
     try {
-      const [profileRes, paymentRes] = await Promise.all([
-        sharingApi.publicByUser(id.trim()),
-        paymentApi.publicStatus(id.trim()),
-      ]);
+      const profileRes = await sharingApi.publicByUser(id.trim());
       const profile = profileRes.data?.data;
-      const payment = paymentRes.data?.data;
+      
       if (profile) {
         setData(profile);
-        if (payment) {
-          setPaymentStatus(payment);
-        }
       } else {
         router.replace("/");
       }
-    } catch {
-      router.replace("/");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      if (msg === "NFC_EXPIRED") {
+        setError("NFC_EXPIRED");
+      } else {
+        router.replace("/");
+      }
     } finally {
       setLoading(false);
     }
@@ -62,40 +58,36 @@ export default function PublicUserPage() {
     );
   }
 
-  if (data) {
-    // Check if user is eligible (active and not expired)
-    if (paymentStatus && !paymentStatus.isActive) {
-      return (
-        <div style={{ minHeight: "100vh", background: "#f0f2f5", display: "flex", justifyContent: "center", alignItems: "center", padding: 24 }}>
-          <Card style={{ maxWidth: 500, width: "100%" }}>
-            <Result
-              icon={<LockOutlined style={{ color: "#faad14" }} />}
-              title="NFC Service Expired"
-              subTitle={
-                paymentStatus.status === "DISABLED"
-                  ? "This NFC service has been disabled. Please contact the owner to renew."
-                  : paymentStatus.daysRemaining <= 0
-                  ? "This NFC service has expired. Please login to renew your service."
-                  : `This NFC service will expire in ${paymentStatus.daysRemaining} days.`
-              }
-              extra={
-                <Button
-                  type="primary"
-                  icon={<DollarOutlined />}
-                  onClick={() => router.push("/renew")}
-                  size="large"
-                >
-                  Renew NFC Service - $2/year
-                </Button>
-              }
-            />
-          </Card>
-        </div>
-      );
-    }
+  if (error === "NFC_EXPIRED") {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f0f2f5", display: "flex", justifyContent: "center", alignItems: "center", padding: 24 }}>
+        <Card style={{ maxWidth: 500, width: "100%" }}>
+          <Result
+            icon={<LockOutlined style={{ color: "#faad14" }} />}
+            title="NFC Service Expired"
+            subTitle="This NFC service has expired or been disabled. The owner needs to login and renew the service."
+            extra={
+              <Button
+                type="primary"
+                icon={<WarningOutlined />}
+                disabled
+                size="large"
+              >
+                Service Unavailable
+              </Button>
+            }
+          />
+        </Card>
+      </div>
+    );
+  }
 
-    const role = data.role?.name || data.user?.role?.name || "USER";
-    if (role === "VIP") {
+  if (data) {
+    const role = data.role?.name || "USER";
+    const subStatus = data.subscription?.status;
+    const subPlan = data.subscription?.plan?.name;
+
+    if (role === "VIP" && subStatus === "ACTIVE") {
       return <VipTemplate user={data} items={data.sharingContent || []} />;
     }
     return <UserTemplate user={data} items={data.sharingContent || []} />;
@@ -131,5 +123,13 @@ export default function PublicUserPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PublicUserPage() {
+  return (
+    <Suspense fallback={<Spin size="large" />}>
+      <PublicUserContent />
+    </Suspense>
   );
 }

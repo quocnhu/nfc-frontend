@@ -261,6 +261,7 @@ export default function FolderPage() {
       width: 140,
       render: (_: any, record: BrowseItem) => {
         if (record.type === "folder") {
+          const isSystemFolder = ["avatar", "icon", ".keep"].includes(record.name);
           return (
             <Space size={4}>
               <Button
@@ -272,14 +273,17 @@ export default function FolderPage() {
               >
                 Open
               </Button>
-              <Popconfirm
-                title="Delete this folder and its contents?"
-                onConfirm={() => handleDeleteFolder(record)}
-                okText="Delete"
-                okType="danger"
-              >
-                <Button size="small" type="text" danger icon={<DeleteOutlined />} />
-              </Popconfirm>
+              {!isSystemFolder && (
+                <Popconfirm
+                  title="Delete this folder?"
+                  description="All subfolders and files inside will be permanently deleted."
+                  onConfirm={() => handleDeleteFolder(record)}
+                  okText="Delete"
+                  okType="danger"
+                >
+                  <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                </Popconfirm>
+              )}
             </Space>
           );
         }
@@ -550,6 +554,24 @@ export default function FolderPage() {
               </div>
             </>
           )}
+        </Modal>
+
+        {/* New Folder Modal */}
+        <Modal
+          title="Create New Folder"
+          open={newFolderOpen}
+          onCancel={() => { setNewFolderOpen(false); setNewFolderName(""); }}
+          onOk={handleCreateFolder}
+          confirmLoading={creatingFolder}
+          okText="Create"
+        >
+          <Input
+            placeholder="Enter folder name"
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            onPressEnter={handleCreateFolder}
+            autoFocus
+          />
         </Modal>
       </div>
     </>

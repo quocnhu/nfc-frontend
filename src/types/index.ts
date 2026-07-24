@@ -25,7 +25,7 @@ export interface User {
   role?: Role;
   failedLoginCount?: number;
   lockedUntil?: string | null;
-  status?: 'ACTIVE' | 'DISABLED';
+  status?: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
   expiresAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -34,6 +34,7 @@ export interface User {
 export interface Role {
   id: string;
   name: string;
+  isActive?: boolean;
   permissions?: Permission[];
   createdAt: string;
   updatedAt: string;
@@ -82,6 +83,12 @@ export interface DashboardStats {
   totalPermissions: number;
   totalSharingContent: number;
   totalHistories: number;
+}
+
+export interface RequestCounts {
+  today: number;
+  month: number;
+  year: number;
 }
 
 export interface UserPermissions {
@@ -139,25 +146,73 @@ export interface SuspiciousActivity {
   };
 }
 
+export interface Plan {
+  id: string;
+  name: string;
+  displayName: string;
+  description?: string;
+  price: number;
+  currency: string;
+  durationDays: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  planId?: string;
+  plan?: Plan;
+  status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'GRACE_PERIOD' | 'EXPIRED' | 'CANCELLED';
+  startDate: string;
+  endDate: string;
+  cancelledAt?: string | null;
+  isCurrent: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserSubscription extends Subscription {
+  user?: { id: string; email: string; fullname: string; avatarUrl?: string; status: string };
+}
+
 export interface Payment {
   id: string;
   userId: string;
   user?: { id: string; fullname: string; email: string; avatarUrl?: string };
+  planId?: string;
+  plan?: Plan;
+  subscriptionId?: string;
+  subscription?: Subscription;
   amount: number;
   currency: string;
   paypalOrderId?: string;
   paypalPayerId?: string;
   status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
   durationDays: number;
-  expiresAt: string;
+  expiresAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface PaymentStatus {
   isActive: boolean;
-  status: 'ACTIVE' | 'DISABLED';
+  status: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
   expiresAt: string | null;
   daysRemaining: number;
+  currentSubscription: {
+    plan: Plan;
+    status: string;
+    endDate: string;
+  } | null;
+  subscriptionHistory: Array<{
+    plan: Plan;
+    status: string;
+    startDate: string;
+    endDate: string;
+    isCurrent: boolean;
+  }>;
+  hasUsedFreeTrial: boolean;
   lastPayment: Payment | null;
 }

@@ -17,16 +17,16 @@ const COLORS = {
 
 function RippleRing({ delay }: { delay: number }) {
   return (
-    <motion.div
+    <div
+      className="ripple-ring"
       style={{
         position: "absolute",
         inset: 0,
         borderRadius: "50%",
         border: `2px solid rgba(${COLORS.accent}, 0.6)`,
+        animation: `ripple 2.4s ease-out ${delay}s infinite`,
+        willChange: "transform, opacity",
       }}
-      initial={{ scale: 1, opacity: 0.6 }}
-      animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
-      transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut", delay }}
     />
   );
 }
@@ -35,23 +35,30 @@ function SpotlightBeam({ color, originX, bottom, swing, duration, delay }: {
   color: string; originX: string; bottom?: boolean; swing: number; duration: number; delay: number;
 }) {
   return (
-    <motion.div
-      style={{ position: "absolute", [bottom ? "bottom" : "top"]: -40, left: originX, width: 2, height: 0, transformOrigin: "top center", pointerEvents: "none" }}
-      animate={{ rotate: [-swing, swing, -swing] }}
-      transition={{ duration, repeat: Infinity, ease: "easeInOut", delay }}
+    <div
+      style={{ 
+        position: "absolute", 
+        [bottom ? "bottom" : "top"]: -40, 
+        left: originX, 
+        width: 2, 
+        height: 0, 
+        transformOrigin: "top center", 
+        pointerEvents: "none",
+        animation: `swing ${duration}s ease-in-out ${delay}s infinite`,
+        willChange: "transform",
+      }}
     >
-      <motion.div
-        animate={{ opacity: [0.5, 0.9, 0.5] }}
-        transition={{ duration: duration / 2, repeat: Infinity, ease: "easeInOut", delay }}
+      <div
         style={{
           width: 0, height: 0,
           borderLeft: "90px solid transparent",
           borderRight: "90px solid transparent",
           [bottom ? "borderBottom" : "borderTop"]: "520px solid " + color,
           filter: "blur(18px)", opacity: 0.7, mixBlendMode: "screen",
+          animation: `pulse-opacity ${duration / 2}s ease-in-out ${delay}s infinite`,
         }}
       />
-    </motion.div>
+    </div>
   );
 }
 
@@ -69,16 +76,22 @@ function TheaterLights() {
 function WelcomeTicker({ text }: { text: string }) {
   return (
     <div style={{ position: "relative", height: 24, overflow: "hidden" }}>
-      <motion.div
-        initial={{ x: "-120%", opacity: 0 }}
-        animate={{ x: ["-110%", "0%", "0%", "120%"], opacity: [0, 1, 1, 0] }}
-        transition={{ duration: 4, times: [0, 0.25, 0.75, 1], repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
-        style={{ position: "absolute", left: 0, right: 0, textAlign: "center" }}
+      <div
+        className="welcome-ticker"
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          animation: "ticker 4s ease-in-out infinite",
+          animationDelay: "3s",
+          willChange: "transform, opacity",
+        }}
       >
         <Text style={{ color: COLORS.textSecondary, fontSize: 13, letterSpacing: 0.5, fontWeight: 400, whiteSpace: "nowrap" }}>
           {text}
         </Text>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -132,13 +145,42 @@ interface Props {
 
 export default function VipTemplate({ user, items }: Props) {
   useEffect(() => {
-    import("canvas-confetti").then((confetti) => {
-      confetti.default({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-    });
+    // Defer confetti loading for better initial performance
+    const timer = setTimeout(() => {
+      import("canvas-confetti").then((confetti) => {
+        confetti.default({ particleCount: 80, spread: 70, origin: { y: 0.6 }, gravity: 1.2, scalar: 0.9 });
+      }).catch(() => {}); // Silently fail if confetti can't load
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, position: "relative", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <style>{`
+        @keyframes ripple {
+          0% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+        @keyframes ticker {
+          0% { transform: translateX(-110%); opacity: 0; }
+          25% { transform: translateX(0); opacity: 1; }
+          75% { transform: translateX(0); opacity: 1; }
+          100% { transform: translateX(120%); opacity: 0; }
+        }
+        @keyframes swing {
+          0%, 100% { transform: rotate(-45deg); }
+          50% { transform: rotate(45deg); }
+        }
+        @keyframes pulse-opacity {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.9; }
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+      `}</style>
       <TheaterLights />
 
       {/* Top: Welcome */}
@@ -153,15 +195,15 @@ export default function VipTemplate({ user, items }: Props) {
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            style={{ textAlign: "center", paddingTop: 10, paddingBottom: 28 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            style={{ textAlign: "center", paddingTop: 10, paddingBottom: 28, transform: "translateZ(0)" }}
           >
-            <motion.div
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            <div
               style={{
                 position: "relative", display: "inline-block", borderRadius: "50%",
                 boxShadow: `0 0 25px 8px rgba(${COLORS.accent}, 0.35), 0 0 60px 15px rgba(${COLORS.accent}, 0.15)`,
+                animation: "pulse 3s ease-in-out infinite",
+                willChange: "transform",
               }}
             >
               <RippleRing delay={0} />
@@ -172,7 +214,7 @@ export default function VipTemplate({ user, items }: Props) {
                 src={user.avatarUrl}
                 style={{ border: `4px solid rgba(${COLORS.accent}, 0.9)`, position: "relative", zIndex: 1 }}
               />
-            </motion.div>
+            </div>
 
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}>
               <Title level={2} style={{ color: COLORS.textPrimary, marginTop: 22, marginBottom: 4, fontWeight: 700 }}>{user.fullname}</Title>
@@ -181,46 +223,65 @@ export default function VipTemplate({ user, items }: Props) {
           </motion.div>
 
           {/* Items */}
-          <Flex vertical gap={10}>
+          <Flex vertical gap={14}>
             {items.map((item, i) => {
               const c = CARD_COLORS[i % CARD_COLORS.length];
               return (
                 <motion.div
                   key={item.id}
-                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: 0.4 + i * 0.1, type: "spring", stiffness: 300, damping: 24 }}
-                  whileHover={{ scale: 1.04, y: -2 }}
-                  whileTap={{ scale: 0.96 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.08, duration: 0.3, ease: "easeOut" }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{ willChange: "transform, opacity" }}
                 >
                   <div
                     onClick={() => openItem(item.url, item.itemName)}
                     style={{
-                      padding: "14px 20px", borderRadius: 16, cursor: "pointer",
-                      background: c.bg, border: `1px solid ${c.border}`,
+                      padding: "18px 24px",
+                      borderRadius: 20,
+                      cursor: "pointer",
+                      background: `linear-gradient(135deg, ${c.bg} 0%, rgba(255,255,255,0.02) 100%)`,
+                      border: `1px solid ${c.border}`,
                       backdropFilter: "blur(10px)",
-                      transition: "box-shadow 0.25s, border-color 0.25s, background 0.25s",
+                      boxShadow: `0 4px 24px ${c.bg}, inset 0 1px 0 rgba(255,255,255,0.05)`,
+                      transition: "all 0.3s ease",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = `0 6px 28px ${c.glow}`;
+                      e.currentTarget.style.boxShadow = `0 8px 36px ${c.glow}, inset 0 1px 0 rgba(255,255,255,0.08)`;
                       e.currentTarget.style.borderColor = c.icon;
-                      e.currentTarget.style.background = c.glow;
+                      e.currentTarget.style.background = `linear-gradient(135deg, ${c.glow} 0%, ${c.bg} 100%)`;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.boxShadow = `0 4px 24px ${c.bg}, inset 0 1px 0 rgba(255,255,255,0.05)`;
                       e.currentTarget.style.borderColor = c.border;
-                      e.currentTarget.style.background = c.bg;
+                      e.currentTarget.style.background = `linear-gradient(135deg, ${c.bg} 0%, rgba(255,255,255,0.02) 100%)`;
                     }}
                   >
-                    <Flex align="center" gap={15}>
-                      <div style={{ fontSize: 24, color: c.icon, width: 32, height: 32, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Flex align="center" gap={18}>
+                      <div 
+                        style={{ 
+                          fontSize: 28, 
+                          color: c.icon, 
+                          width: 48, 
+                          height: 48, 
+                          display: "flex", 
+                          alignItems: "center", 
+                          justifyContent: "center",
+                          background: `radial-gradient(circle, ${c.bg} 0%, transparent 70%)`,
+                          borderRadius: "50%",
+                          border: `2px solid ${c.border}`,
+                          boxShadow: `0 0 24px ${c.bg}`,
+                        }}
+                      >
                         {item.iconUrl ? (
-                          <img src={item.iconUrl} alt={item.itemName} style={{ width: 28, height: 28, objectFit: "contain" }} />
+                          <img src={item.iconUrl} alt={item.itemName} style={{ width: 34, height: 34, objectFit: "contain" }} />
                         ) : (
                           getIcon(item.icon)
                         )}
                       </div>
-                      <Text style={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: 500 }}>{item.itemName}</Text>
+                      <Text style={{ color: COLORS.textPrimary, fontSize: 18, fontWeight: 600, letterSpacing: 0.3 }}>{item.itemName}</Text>
                     </Flex>
                   </div>
                 </motion.div>
@@ -234,7 +295,7 @@ export default function VipTemplate({ user, items }: Props) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.8, duration: 0.8 }}
+        transition={{ delay: 0.6, duration: 0.5, ease: "easeOut" }}
         style={{ textAlign: "center", padding: "20px 0 12px", position: "relative", zIndex: 1 }}
       >
         <Text style={{ color: COLORS.textTertiary, fontSize: 12, letterSpacing: 0.3 }}>

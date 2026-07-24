@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Table, Button, Modal, Form, Input, Space, message, Popconfirm, Typography, AutoComplete, Select, Tooltip } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, UserOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, UserOutlined, YoutubeOutlined, TikTokOutlined, FacebookOutlined, InstagramOutlined, LinkedinOutlined, TwitterOutlined, GithubOutlined, GlobalOutlined, MailOutlined, PhoneOutlined, StarOutlined, LinkOutlined as LinkIconOutlined } from "@ant-design/icons";
 import { sharingApi, dashboardApi, userApi, uploadApi } from "@/lib/api";
 import { formatDate } from "@/utils/helpers";
 import type { SharingContent, User } from "@/types";
@@ -11,6 +11,25 @@ interface IconItem {
   name: string;
   url: string;
   path: string;
+}
+
+function getIconComponent(iconName: string): React.ReactNode {
+  const map: Record<string, React.ReactNode> = {
+    youtube: <YoutubeOutlined style={{ color: "#ff0000" }} />,
+    tiktok: <TikTokOutlined style={{ color: "#000000" }} />,
+    facebook: <FacebookOutlined style={{ color: "#1877f2" }} />,
+    instagram: <InstagramOutlined style={{ color: "#e4405f" }} />,
+    linkedin: <LinkedinOutlined style={{ color: "#0a66c2" }} />,
+    twitter: <TwitterOutlined style={{ color: "#1da1f2" }} />,
+    github: <GithubOutlined style={{ color: "#333333" }} />,
+    globe: <GlobalOutlined style={{ color: "#4f46e5" }} />,
+    mail: <MailOutlined style={{ color: "#ea4335" }} />,
+    phone: <PhoneOutlined style={{ color: "#34a853" }} />,
+    star: <StarOutlined style={{ color: "#fbbc04" }} />,
+    link: <LinkIconOutlined style={{ color: "#4f46e5" }} />,
+    world: <GlobalOutlined style={{ color: "#4f46e5" }} />,
+  };
+  return map[iconName?.toLowerCase()] || <LinkIconOutlined style={{ color: "#4f46e5" }} />;
 }
 
 export default function SharingContentPage() {
@@ -151,6 +170,18 @@ export default function SharingContentPage() {
     { title: "Icon", dataIndex: "icon", key: "icon", filterSearch: true,
       filters: [...new Set(items.map((i) => i.icon))].map((n) => ({ text: n, value: n })),
       onFilter: (value: any, record: SharingContent) => record.icon === value,
+      render: (icon: string) => {
+        const iconItem = icons.find(i => i.name.replace(/\.[^.]+$/, "") === icon);
+        return (
+          <Tooltip title={icon}>
+            {iconItem ? (
+              <img src={iconItem.url} alt={icon} style={{ width: 24, height: 24, objectFit: "contain" }} />
+            ) : (
+              <span style={{ fontSize: 16 }}>{getIconComponent(icon)}</span>
+            )}
+          </Tooltip>
+        );
+      },
     },
     { title: "CreatedDate", dataIndex: "createdAt", key: "createdAt",
       filters: [...new Set(items.map((i) => formatDate(i.createdAt)))].map((d) => ({ text: d, value: d })),

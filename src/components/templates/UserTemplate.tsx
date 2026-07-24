@@ -20,16 +20,16 @@ const COLORS = {
 
 function RippleRing({ delay, color }: { delay: number; color: string }) {
   return (
-    <motion.div
+    <div
+      className="ripple-ring"
       style={{
         position: "absolute",
         inset: 0,
         borderRadius: "50%",
         border: `2px solid ${color}`,
+        animation: `ripple 2s ease-out ${delay}s infinite`,
+        willChange: "transform, opacity",
       }}
-      initial={{ scale: 1, opacity: 0.6 }}
-      animate={{ scale: [1, 1.5], opacity: [0.6, 0] }}
-      transition={{ duration: 2, repeat: Infinity, ease: "easeOut", delay }}
     />
   );
 }
@@ -68,16 +68,22 @@ const CARD_COLORS = [
 function WelcomeTicker({ text }: { text: string }) {
   return (
     <div style={{ position: "relative", height: 22, overflow: "hidden", marginBottom: 10 }}>
-      <motion.div
-        initial={{ x: "-120%", opacity: 0 }}
-        animate={{ x: ["-110%", "0%", "0%", "120%"], opacity: [0, 1, 1, 0] }}
-        transition={{ duration: 4, times: [0, 0.25, 0.75, 1], repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
-        style={{ position: "absolute", left: 0, right: 0, textAlign: "center" }}
+      <div
+        className="welcome-ticker"
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          animation: "ticker 4s ease-in-out infinite",
+          animationDelay: "3s",
+          willChange: "transform, opacity",
+        }}
       >
         <Text style={{ color: COLORS.textSecondary, fontSize: 13, letterSpacing: 0.3, fontWeight: 400, whiteSpace: "nowrap" }}>
           {text}
         </Text>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -100,13 +106,34 @@ interface Props {
 
 export default function UserTemplate({ user, items }: Props) {
   useEffect(() => {
-    import("canvas-confetti").then((confetti) => {
-      confetti.default({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-    });
+    // Defer confetti loading for better initial performance
+    const timer = setTimeout(() => {
+      import("canvas-confetti").then((confetti) => {
+        confetti.default({ particleCount: 60, spread: 70, origin: { y: 0.6 }, gravity: 1.2, scalar: 0.9 });
+      }).catch(() => {}); // Silently fail if confetti can't load
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", justifyContent: "center", padding: "40px 16px", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
+      <style>{`
+        @keyframes ripple {
+          0% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(1.5); opacity: 0; }
+        }
+        @keyframes ticker {
+          0% { transform: translateX(-110%); opacity: 0; }
+          25% { transform: translateX(0); opacity: 1; }
+          75% { transform: translateX(0); opacity: 1; }
+          100% { transform: translateX(120%); opacity: 0; }
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+      `}</style>
       <div className="profile-bg">
         <div className="profile-ripple" />
         <div className="profile-ripple" />
@@ -115,13 +142,23 @@ export default function UserTemplate({ user, items }: Props) {
         <div className="profile-ripple" />
         <div className="profile-ripple" />
       </div>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1, marginTop: -35, display: "flex", flexDirection: "column", minHeight: "calc(100vh - 80px)" }}>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.4, ease: "easeOut" }} 
+        style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1, marginTop: -35, display: "flex", flexDirection: "column", minHeight: "calc(100vh - 80px)", transform: "translateZ(0)" }}
+      >
         <WelcomeTicker text={`Welcome to ${user.fullname}'s page`} />
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <motion.div
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            style={{ position: "relative", display: "inline-block", borderRadius: "50%", boxShadow: `0 0 20px 5px rgba(${COLORS.accentRgb}, 0.25), 0 0 40px 10px rgba(${COLORS.accentRgb}, 0.1)` }}
+            style={{ 
+              position: "relative", 
+              display: "inline-block", 
+              borderRadius: "50%", 
+              boxShadow: `0 0 20px 5px rgba(${COLORS.accentRgb}, 0.25), 0 0 40px 10px rgba(${COLORS.accentRgb}, 0.1)`,
+              animation: "pulse 3s ease-in-out infinite",
+              willChange: "transform",
+            }}
           >
             <RippleRing delay={0} color={`rgba(${COLORS.accentRgb}, 0.4)`} />
             <RippleRing delay={0.7} color={`rgba(${COLORS.accentRgb}, 0.3)`} />
@@ -136,39 +173,65 @@ export default function UserTemplate({ user, items }: Props) {
           <Text style={{ color: COLORS.textSecondary, fontSize: 14 }}>{user.email}</Text>
         </div>
 
-        <Flex vertical gap={12}>
+        <Flex vertical gap={14}>
           {items.map((item, i) => {
             const c = CARD_COLORS[i % CARD_COLORS.length];
             return (
               <motion.div
                 key={item.id}
-                initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: 0.3 + i * 0.1, type: "spring", stiffness: 300, damping: 24 }}
-                whileHover={{ scale: 1.04, y: -2 }}
-                whileTap={{ scale: 0.96 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + i * 0.08, duration: 0.3, ease: "easeOut" }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                style={{ willChange: "transform, opacity" }}
               >
                 <div
                   className="profile-item"
                   onClick={() => openItem(item.url, item.itemName)}
                   style={{
-                    background: c.bg,
+                    background: `linear-gradient(135deg, ${c.bg} 0%, rgba(255,255,255,0.03) 100%)`,
                     border: `1px solid ${c.border}`,
-                    borderRadius: 12,
-                    padding: "14px 18px",
+                    borderRadius: 20,
+                    padding: "16px 20px",
                     display: "flex",
                     alignItems: "center",
-                    gap: 14,
+                    gap: 16,
+                    boxShadow: `0 4px 20px ${c.bg}, inset 0 1px 0 rgba(255,255,255,0.05)`,
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = `0 8px 32px ${c.border}, inset 0 1px 0 rgba(255,255,255,0.08)`;
+                    e.currentTarget.style.borderColor = c.icon;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = `0 4px 20px ${c.bg}, inset 0 1px 0 rgba(255,255,255,0.05)`;
+                    e.currentTarget.style.borderColor = c.border;
                   }}
                 >
-                  <div style={{ fontSize: 22, color: c.icon, width: 32, height: 32, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div 
+                    style={{ 
+                      fontSize: 24, 
+                      color: c.icon, 
+                      width: 44, 
+                      height: 44, 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center",
+                      background: `radial-gradient(circle, ${c.bg} 0%, transparent 70%)`,
+                      borderRadius: "50%",
+                      border: `2px solid ${c.border}`,
+                      boxShadow: `0 0 20px ${c.bg}`,
+                    }}
+                  >
                     {item.iconUrl ? (
-                      <img src={item.iconUrl} alt={item.itemName} style={{ width: 26, height: 26, objectFit: "contain" }} />
+                      <img src={item.iconUrl} alt={item.itemName} style={{ width: 30, height: 30, objectFit: "contain" }} />
                     ) : (
                       getIcon(item.icon)
                     )}
                   </div>
-                  <Text style={{ color: COLORS.textPrimary, fontSize: 15, fontWeight: 500 }}>{item.itemName}</Text>
+                  <Text style={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: 600, letterSpacing: 0.3 }}>{item.itemName}</Text>
                 </div>
               </motion.div>
             );

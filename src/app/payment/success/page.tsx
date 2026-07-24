@@ -1,17 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, Result, Button, Spin, Typography } from "antd";
-import { CheckCircleOutlined } from "@ant-design/icons";
 import { paymentApi } from "@/lib/api";
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [planInfo, setPlanInfo] = useState<{ name: string; duration: string } | null>(null);
+
+  function formatDuration(days: number): string {
+    if (days === 0) return "30 minutes";
+    if (days <= 1) return "1 day";
+    if (days === 30) return "1 month";
+    if (days === 365) return "1 year";
+    if (days < 30) return `${days} days`;
+    if (days < 365) return `${Math.floor(days / 30)} month${Math.floor(days / 30) > 1 ? 's' : ''}`;
+    return `${Math.floor(days / 365)} year${Math.floor(days / 365) > 1 ? 's' : ''}`;
+  }
 
   useEffect(() => {
     const capturePayment = async () => {
@@ -27,6 +37,13 @@ export default function PaymentSuccessPage() {
       try {
         const res = await paymentApi.capture(token, payerId || undefined);
         if (res.data?.success) {
+          const subscription = res.data?.data?.subscription;
+          if (subscription?.plan) {
+            setPlanInfo({
+              name: subscription.plan.displayName || subscription.plan.name,
+              duration: formatDuration(subscription.plan.durationDays),
+            });
+          }
           setSuccess(true);
         } else {
           setError(res.data?.message || "Payment capture failed");
@@ -55,13 +72,17 @@ export default function PaymentSuccessPage() {
   }
 
   if (success) {
+    const message = planInfo
+      ? `Your NFC service has been renewed with the ${planInfo.name} plan for ${planInfo.duration}. You can now continue using all features.`
+      : "Your NFC service has been renewed successfully. You can now continue using all features.";
+
     return (
       <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: "#f0f2f5", padding: 24 }}>
         <Card style={{ maxWidth: 500, width: "100%" }}>
           <Result
             status="success"
             title="Payment Successful!"
-            subTitle="Your NFC service has been renewed for 1 year. You can now continue using all features."
+            subTitle={message}
             extra={[
               <Button type="primary" key="profile" onClick={() => router.push("/profile")}>
                 Go to Profile
@@ -94,5 +115,13 @@ export default function PaymentSuccessPage() {
         />
       </Card>
     </div>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={<Spin size="large" />}>
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Layout, Menu, Button, Avatar, Dropdown, Space, Typography } from "antd";
+import { Layout, Menu, Button, Avatar, Dropdown, Space, Typography, Badge } from "antd";
 import {
   LogoutOutlined,
   UserOutlined,
@@ -15,19 +15,23 @@ import {
   QrcodeOutlined,
   HomeOutlined,
   DollarOutlined,
+  BellOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
 import { useAvatar } from "@/components/providers/AvatarProvider";
+import { paymentApi } from "@/lib/api";
+import type { PaymentStatus } from "@/types";
 
 
 const { Header, Sider, Content } = Layout;
 
 const routeMap: Record<
   string,
-  { icon: React.ReactNode; label: string; permission: string }
+  { icon: React.ReactNode; label: string; permission: string; hideForAdmin?: boolean }
 > = {
   "/dashboard": {
     icon: <DashboardOutlined />,
@@ -38,6 +42,16 @@ const routeMap: Record<
     icon: <UserOutlined />,
     label: "Users",
     permission: "read:user",
+  },
+  "/subscriptions": {
+    icon: <CrownOutlined />,
+    label: "Subscriptions",
+    permission: "read:dashboard",
+  },
+  "/plans": {
+    icon: <DollarOutlined />,
+    label: "Plans",
+    permission: "read:dashboard",
   },
   "/sharing-content": {
     icon: <ShareAltOutlined />,
@@ -69,11 +83,18 @@ const routeMap: Record<
     label: "Payments",
     permission: "read:dashboard",
   },
+  "/upgrade": {
+    icon: <CrownOutlined />,
+    label: "Upgrade",
+    permission: "",
+    hideForAdmin: true,
+  },
   "/profile": { icon: <SettingOutlined />, label: "Profile", permission: "" },
 };
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -88,23 +109,35 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
+  useEffect(() => {
+    if (session?.user) {
+      paymentApi.status().then((res) => {
+        setPaymentStatus(res.data?.data || null);
+      }).catch(() => {});
+    }
+  }, [session, pathname]);
+
   const user = session?.user;
 
   const permissions = (user as any)?.permissions as string[] | undefined;
+  const userRole = (user as any)?.role as string | undefined;
+  const isAdmin = userRole === "ADMIN";
 
   const menuItems = useMemo(() => {
     if (!permissions) return [];
     return Object.entries(routeMap)
       .filter(
-        ([, item]) =>
-          item.permission === "" || permissions.includes(item.permission)
+        ([, item]) => {
+          if (item.hideForAdmin && isAdmin) return false;
+          return item.permission === "" || permissions.includes(item.permission);
+        }
       )
       .map(([key, item]) => ({
         key,
         icon: item.icon,
         label: item.label,
       }));
-  }, [permissions]);
+  }, [permissions, isAdmin]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -201,6 +234,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </Space>
 
           <Space size={12}>
+            {paymentStatus && !paymentStatus.isActive && !isAdmin && (
+              <Badge dot>
+                <Button
+                  type="text"
+                  icon={<BellOutlined />}
+                  onClick={() => router.push("/upgrade")}
+                  style={{
+                    fontSize: 16,
+                    color: "#ff4d4f",
+                  }}
+                  title="NFC Service Expired - Click to Upgrade"
+                />
+              </Badge>
+            )}
             <Button
               type="text"
               icon={<BulbOutlined />}

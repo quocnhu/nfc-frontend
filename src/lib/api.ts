@@ -8,6 +8,7 @@ import type {
   SharingContent,
   History,
   DashboardStats,
+  RequestCounts,
   UserPermissions,
   Folder,
   UploadedFile,
@@ -15,6 +16,9 @@ import type {
   SuspiciousActivity,
   Payment,
   PaymentStatus,
+  Plan,
+  Subscription,
+  UserSubscription,
 } from "@/types";
 
 export const authApi = {
@@ -41,7 +45,7 @@ export const userApi = {
   getMe: () => api.get<ApiResponse<User>>("/users/me"),
   create: (data: { email: string; password: string; fullname: string; roleId?: string }) =>
     api.post<ApiResponse<User>>("/users", data),
-  update: (data: { id: string; email?: string; fullname?: string; roleId?: string; newPassword?: string; avatarUrl?: string; isEmailVerified?: boolean }) =>
+  update: (data: { id: string; email?: string; fullname?: string; roleId?: string; newPassword?: string; avatarUrl?: string; isEmailVerified?: boolean; expiresAt?: string | null }) =>
     api.post<ApiResponse<User>>("/users/update", data),
   remove: (id: string) =>
     api.post<ApiResponse>("/users/delete", { id }),
@@ -55,6 +59,8 @@ export const userApi = {
     api.post<ApiResponse>("/users/assign-permissions", { id, permissionIds }),
   unlock: (id: string) =>
     api.post<ApiResponse>("/users/unlock", { id }),
+  toggleStatus: (id: string) =>
+    api.post<ApiResponse<User>>("/users/toggle-status", { id }),
 };
 
 export const roleApi = {
@@ -104,6 +110,7 @@ export const historyApi = {
 
 export const dashboardApi = {
   stats: () => api.get<ApiResponse<DashboardStats>>("/dashboard/stats"),
+  requests: () => api.get<ApiResponse<RequestCounts>>("/dashboard/requests"),
   permissions: () => api.get<ApiResponse<UserPermissions>>("/dashboard/permissions"),
   userPermissions: (userId: string) =>
     api.get<ApiResponse<UserPermissions>>(`/dashboard/permissions/${userId}`),
@@ -112,6 +119,12 @@ export const dashboardApi = {
     api.get<ApiResponse<History[]>>("/dashboard/activity", { params: { limit } }),
   suspicious: () =>
     api.get<ApiResponse<SuspiciousActivity>>("/dashboard/suspicious"),
+  subscriptionStats: (startDate?: string, endDate?: string) =>
+    api.get<ApiResponse<{ total: number; active: number; expired: number; trial: number }>>("/dashboard/subscriptions", { params: { startDate, endDate } }),
+  paymentStats: (startDate?: string, endDate?: string) =>
+    api.get<ApiResponse<{ total: number; completed: number; revenue: number }>>("/dashboard/payments", { params: { startDate, endDate } }),
+  growth: () =>
+    api.get<ApiResponse<{ labels: string[]; subscriptionData: number[]; revenueData: number[] }>>("/dashboard/growth"),
 };
 
 export const uploadApi = {
@@ -224,8 +237,10 @@ export const qrApi = {
 };
 
 export const paymentApi = {
-  createOrder: () =>
-    api.post<ApiResponse<{ orderId: string; approveUrl: string }>>('/payment/create-order'),
+  plans: () =>
+    api.get<ApiResponse<Plan[]>>('/payment/plans'),
+  createOrder: (planId?: string) =>
+    api.post<ApiResponse<{ orderId: string; approveUrl: string }>>('/payment/create-order', { planId }),
   capture: (orderId: string, payerId?: string) =>
     api.post<ApiResponse>('/payment/capture', { orderId, payerId }),
   myPayments: () =>
@@ -235,7 +250,27 @@ export const paymentApi = {
   status: () =>
     api.get<ApiResponse<PaymentStatus>>('/payment/status'),
   publicStatus: (userId: string) =>
-    api.get<ApiResponse<PaymentStatus>>(`/payment/public-status/${userId}`),
+    api.get<ApiResponse<PaymentStatus>>("/payment/public-status", { params: { userId } }),
+  // Admin subscription management
+  subscriptions: (period?: string) =>
+    api.get<ApiResponse<UserSubscription[] | { subscriptions: UserSubscription[]; counts: { total: number; active: number; expired: number }; period: string }>>('/payment/subscriptions', { params: period ? { period } : undefined }),
+  userSubscriptions: (userId: string) =>
+    api.get<ApiResponse<Subscription[]>>(`/payment/subscriptions/user/${userId}`),
+  adminChangePlan: (userId: string, planId: string) =>
+    api.post<ApiResponse>('/payment/admin-change-plan', { userId, planId }),
+  cancelSubscription: (userId: string) =>
+    api.post<ApiResponse>('/payment/cancel-subscription', { userId }),
+  cleanupExpired: () =>
+    api.post<ApiResponse>('/payment/cleanup-expired'),
+  // Plan management
+  getAllPlans: () =>
+    api.get<ApiResponse<any[]>>('/payment/plans/all'),
+  createPlan: (data: { name: string; displayName: string; description?: string; price: number; currency?: string; durationDays: number; isActive?: boolean }) =>
+    api.post<ApiResponse<Plan>>('/payment/plans', data),
+  updatePlan: (data: { id: string; name?: string; displayName?: string; description?: string; price?: number; currency?: string; durationDays?: number; isActive?: boolean }) =>
+    api.post<ApiResponse<Plan>>('/payment/plans/update', data),
+  deletePlan: (id: string) =>
+    api.post<ApiResponse>('/payment/plans/delete', { id }),
 };
 
 export interface HomepageImage {

@@ -27,6 +27,7 @@ import { userdataApi } from "@/lib/api";
 import { useAvatarSync } from "@/hooks/useAvatarSync";
 import { useAvatar } from "@/components/providers/AvatarProvider";
 import { getCroppedImg } from "@/lib/cropImage";
+import { InfoRow } from "@/components/ui";
 
 const Cropper = dynamic(() => import("react-easy-crop").then(mod => mod.default), { ssr: false });
 
@@ -45,10 +46,7 @@ export default function ProfilePage() {
   const { isDark } = useTheme();
   const [messageApi, contextHolder] = message.useMessage();
 
-  // Copy link state
   const [copied, setCopied] = useState(false);
-
-  // Avatar upload state
   const [filePickerOpen, setFilePickerOpen] = useState(false);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [cropImage, setCropImage] = useState("");
@@ -59,8 +57,6 @@ export default function ProfilePage() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-
-  // Avatar history
   const [avatarHistory, setAvatarHistory] = useState<{ name: string; url: string; path: string }[]>([]);
 
   const initials = (user?.name || "U")
@@ -72,7 +68,6 @@ export default function ProfilePage() {
 
   const roleColor = ROLE_COLORS[user?.role || ""] || "#4f46e5";
 
-  // Fetch avatar history on mount only
   useEffect(() => {
     if (!(user as any)?.id) return;
     userdataApi
@@ -80,8 +75,6 @@ export default function ProfilePage() {
       .then((res) => setAvatarHistory(res.data?.data || []))
       .catch(() => setAvatarHistory([]));
   }, [(user as any)?.id]);
-
-  // ─── Avatar Upload Handlers ───
 
   const handleFileSelect = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -116,7 +109,6 @@ export default function ProfilePage() {
 
       messageApi.success("Avatar updated successfully");
       router.refresh();
-      // Refresh avatar list
       if ((user as any)?.id) {
         userdataApi
           .listAdminAvatars((user as any).id)
@@ -165,7 +157,6 @@ export default function ProfilePage() {
           background: isDark ? "#1e1e2e" : "#ffffff",
         }}
       >
-        {/* Header Banner */}
         <div
           style={{
             margin: "-24px -24px 0",
@@ -174,46 +165,19 @@ export default function ProfilePage() {
             position: "relative",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              top: 16,
-              right: 20,
-              fontSize: 48,
-              opacity: 0.15,
-              color: "#fff",
-            }}
-          >
+          <div style={{ position: "absolute", top: 16, right: 20, fontSize: 48, opacity: 0.15, color: "#fff" }}>
             <IdcardOutlined />
           </div>
         </div>
 
-        {/* Avatar overlapping banner */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            marginTop: -48,
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          <div
-            style={{
-              position: "relative",
-              width: 96,
-              height: 96,
-            }}
-          >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: -48, position: "relative", zIndex: 1 }}>
+          <div style={{ position: "relative", width: 96, height: 96 }}>
             <div
               style={{
                 width: 96,
                 height: 96,
                 borderRadius: "50%",
-                background: liveAvatarUrl
-                  ? "transparent"
-                  : `linear-gradient(135deg, ${roleColor}, ${roleColor}99)`,
+                background: liveAvatarUrl ? "transparent" : `linear-gradient(135deg, ${roleColor}, ${roleColor}99)`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -226,18 +190,12 @@ export default function ProfilePage() {
               }}
             >
               {liveAvatarUrl ? (
-                <img
-                  src={liveAvatarUrl}
-                  alt="avatar"
-                  loading="lazy"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
+                <img src={liveAvatarUrl} alt="avatar" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
                 initials
               )}
             </div>
 
-            {/* Camera icon overlay */}
             <div
               onClick={() => setFilePickerOpen(true)}
               style={{
@@ -263,70 +221,28 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <Typography.Title
-            level={3}
-            style={{ margin: "16px 0 4px", fontWeight: 700 }}
-          >
+          <Typography.Title level={3} style={{ margin: "16px 0 4px", fontWeight: 700 }}>
             {user?.name || "Unknown"}
           </Typography.Title>
 
-          <Tag
-            color={roleColor}
-            style={{
-              fontSize: 13,
-              padding: "2px 14px",
-              borderRadius: 20,
-              fontWeight: 600,
-              letterSpacing: 0.5,
-            }}
-          >
+          <Tag color={roleColor} style={{ fontSize: 13, padding: "2px 14px", borderRadius: 20, fontWeight: 600, letterSpacing: 0.5 }}>
             {user?.role || "USER"}
           </Tag>
         </div>
 
         <Divider style={{ margin: "28px 0 20px" }} />
 
-        {/* Info Rows */}
         <div style={{ padding: "0 8px" }}>
-          <InfoRow
-            icon={<UserOutlined style={{ fontSize: 18 }} />}
-            label="Full Name"
-            value={user?.name || "—"}
-            isDark={isDark}
-            iconBg="#4f46e5"
-          />
-          <InfoRow
-            icon={<MailOutlined style={{ fontSize: 18 }} />}
-            label="Email"
-            value={user?.email || "—"}
-            isDark={isDark}
-            iconBg="#10b981"
-          />
-          <InfoRow
-            icon={<SafetyOutlined style={{ fontSize: 18 }} />}
-            label="Role"
-            value={user?.role || "—"}
-            isDark={isDark}
-            iconBg={roleColor}
-          />
-          <InfoRow
-            icon={<KeyOutlined style={{ fontSize: 18 }} />}
-            label="User ID (UUID)"
-            value={(user as any)?.id || "—"}
-            isDark={isDark}
-            iconBg="#722ed1"
-            isLast
-          />
+          <InfoRow icon={<UserOutlined style={{ fontSize: 18 }} />} label="Full Name" value={user?.name || "—"} iconBg="#4f46e5" />
+          <InfoRow icon={<MailOutlined style={{ fontSize: 18 }} />} label="Email" value={user?.email || "—"} iconBg="#10b981" />
+          <InfoRow icon={<SafetyOutlined style={{ fontSize: 18 }} />} label="Role" value={user?.role || "—"} iconBg={roleColor} />
+          <InfoRow icon={<KeyOutlined style={{ fontSize: 18 }} />} label="User ID (UUID)" value={(user as any)?.id || "—"} iconBg="#722ed1" isLast />
         </div>
 
-        {/* NFC Link & QR Code */}
         <Divider style={{ margin: "20px 0 16px" }} />
         <div style={{ padding: "0 8px 8px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase" }}
-            >
+            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase" }}>
               NFC Card Link
             </Typography.Text>
             <LinkOutlined style={{ color: "#4f46e5", fontSize: 14 }} />
@@ -367,29 +283,18 @@ export default function ProfilePage() {
             />
           </div>
           <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
-            <div
-              style={{
-                padding: 16,
-                borderRadius: 12,
-                background: "#fff",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-              }}
-            >
+            <div style={{ padding: 16, borderRadius: 12, background: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
               <QRCodeSVG value={publicUrl} size={160} />
             </div>
           </div>
         </div>
 
-        {/* Permissions */}
         {user?.permissions && user.permissions.length > 0 && (
           <>
             <Divider style={{ margin: "20px 0 16px" }} />
             <div style={{ padding: "0 8px 8px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Typography.Text
-                  type="secondary"
-                  style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase" }}
-                >
+                <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase" }}>
                   Permissions
                 </Typography.Text>
                 <Tag color="purple" style={{ margin: 0, borderRadius: 10, fontSize: 11, fontWeight: 600 }}>
@@ -418,22 +323,10 @@ export default function ProfilePage() {
         )}
       </Card>
 
-      {/* ─── File Picker Modal ─── */}
-      <Modal
-        title="Upload Avatar"
-        open={filePickerOpen}
-        onCancel={() => setFilePickerOpen(false)}
-        footer={null}
-        width={480}
-        style={{ maxWidth: "90vw" }}
-      >
+      <Modal title="Upload Avatar" open={filePickerOpen} onCancel={() => setFilePickerOpen(false)} footer={null} width={480} style={{ maxWidth: "90vw" }}>
         <div style={{ textAlign: "center", marginBottom: 16 }}>
           {liveAvatarUrl ? (
-            <img
-              src={liveAvatarUrl}
-              alt="current avatar"
-              style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover" }}
-            />
+            <img src={liveAvatarUrl} alt="current avatar" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover" }} />
           ) : (
             <div
               style={{
@@ -493,11 +386,7 @@ export default function ProfilePage() {
                       transition: "border-color 0.15s",
                     }}
                   >
-                    <img
-                      src={av.url}
-                      alt={av.name}
-                      style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }}
-                    />
+                    <img src={av.url} alt={av.name} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
                     {isActive && (
                       <div style={{
                         position: "absolute",
@@ -522,7 +411,6 @@ export default function ProfilePage() {
         )}
       </Modal>
 
-      {/* ─── Crop Modal ─── */}
       <Modal
         title={<span><ScissorOutlined /> Crop Avatar</span>}
         open={cropModalOpen}
@@ -536,115 +424,49 @@ export default function ProfilePage() {
       >
         {uploading ? (
           <div style={{ padding: "40px 24px", textAlign: "center" }}>
-            <Progress
-              type="circle"
-              percent={uploadProgress}
-              size={100}
-              strokeColor="#4f46e5"
-            />
+            <Progress type="circle" percent={uploadProgress} size={100} strokeColor="#4f46e5" />
             <div style={{ marginTop: 16, fontSize: 14, color: "#6e6e73" }}>
               Uploading... {uploadProgress}%
             </div>
           </div>
         ) : (
-        <>
-        <div style={{ position: "relative", width: "100%", height: "clamp(250px, 50vw, 400px)", background: "#1a1a2e" }}>
-          {cropImage && (
-            // @ts-expect-error react-easy-crop types
-            <Cropper
-              image={cropImage}
-              crop={crop}
-              zoom={zoom}
-              rotation={rotation}
-              aspect={1}
-              cropShape="round"
-              showGrid={false}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onCropComplete}
-              style={{ containerStyle: { borderRadius: 8 } }}
-            />
-          )}
-        </div>
-        <div style={{ padding: "12px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-            <RotateLeftOutlined style={{ color: "#a0a0b0" }} />
-            <Typography.Text style={{ minWidth: 40, textAlign: "center", fontSize: 13 }}>{rotation}°</Typography.Text>
-            <Slider min={0} max={360} value={rotation} onChange={setRotation} style={{ flex: 1 }} />
-            <RotateRightOutlined style={{ color: "#a0a0b0" }} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Typography.Text style={{ fontSize: 13 }}>Zoom</Typography.Text>
-            <Slider min={1} max={3} step={0.1} value={zoom} onChange={setZoom} style={{ flex: 1 }} />
-          </div>
-          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-            Output: 512x512 JPEG. Drag to position, scroll to zoom.
-          </Typography.Text>
-        </div>
-        </>
+          <>
+            <div style={{ position: "relative", width: "100%", height: "clamp(250px, 50vw, 400px)", background: "#1a1a2e" }}>
+              {cropImage && (
+                // @ts-expect-error react-easy-crop types
+                <Cropper
+                  image={cropImage}
+                  crop={crop}
+                  zoom={zoom}
+                  rotation={rotation}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                  style={{ containerStyle: { borderRadius: 8 } }}
+                />
+              )}
+            </div>
+            <div style={{ padding: "12px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <RotateLeftOutlined style={{ color: "#a0a0b0" }} />
+                <Typography.Text style={{ minWidth: 40, textAlign: "center", fontSize: 13 }}>{rotation}°</Typography.Text>
+                <Slider min={0} max={360} value={rotation} onChange={setRotation} style={{ flex: 1 }} />
+                <RotateRightOutlined style={{ color: "#a0a0b0" }} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Typography.Text style={{ fontSize: 13 }}>Zoom</Typography.Text>
+                <Slider min={1} max={3} step={0.1} value={zoom} onChange={setZoom} style={{ flex: 1 }} />
+              </div>
+              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                Output: 512x512 JPEG. Drag to position, scroll to zoom.
+              </Typography.Text>
+            </div>
+          </>
         )}
       </Modal>
-    </div>
-  );
-}
-
-function InfoRow({
-  icon,
-  label,
-  value,
-  isDark,
-  iconBg,
-  isLast,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  isDark: boolean;
-  iconBg: string;
-  isLast?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 14,
-        padding: "14px 0",
-        borderBottom: isLast ? "none" : `1px solid ${isDark ? "#2e2e40" : "#f0f0f0"}`,
-      }}
-    >
-      <div
-        style={{
-          width: 38,
-          height: 38,
-          borderRadius: 10,
-          background: `${iconBg}18`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: iconBg,
-          flexShrink: 0,
-        }}
-      >
-        {icon}
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 12, color: isDark ? "#a0a0b0" : "#6e6e73", marginBottom: 2 }}>
-          {label}
-        </div>
-        <div
-          style={{
-            fontSize: 15,
-            fontWeight: 500,
-            color: isDark ? "#e0e0e8" : "#1d1d1f",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {value}
-        </div>
-      </div>
     </div>
   );
 }

@@ -37,6 +37,7 @@ export default function UsersPage() {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [roleForm] = Form.useForm();
   const [selectedRolePerms, setSelectedRolePerms] = useState<string[]>([]);
+  const [roleName, setRoleName] = useState('');
 
   // Individual permissions modal
   const [permModalOpen, setPermModalOpen] = useState(false);
@@ -79,6 +80,8 @@ export default function UsersPage() {
   const [usersPagination, setUsersPagination] = useState({ current: 1, pageSize: 10 });
   const [rolesPagination, setRolesPagination] = useState({ current: 1, pageSize: 10 });
   const [permsPagination, setPermsPagination] = useState({ current: 1, pageSize: 10 });
+  const [bulkSelectedUserIds, setBulkSelectedUserIds] = useState<string[]>([]);
+  const [bulkSelectedRoleIds, setBulkSelectedRoleIds] = useState<string[]>([]);
 
   const getErrorMessage = (err: any): string => {
     const data = err?.response?.data;
@@ -189,6 +192,30 @@ export default function UsersPage() {
     }
   };
 
+  const handleBulkDeleteUsers = async () => {
+    if (!bulkSelectedUserIds.length) {
+      messageApi.warning("Please select users to delete");
+      return;
+    }
+    const adminUsers = users.filter(u => bulkSelectedUserIds.includes(u.id) && u.role?.name === "ADMIN");
+    if (adminUsers.length) {
+      messageApi.warning("Cannot delete admin users");
+      return;
+    }
+    if (bulkSelectedUserIds.includes(currentUserId)) {
+      messageApi.warning("Cannot delete yourself");
+      return;
+    }
+    try {
+      await userApi.bulkDelete(bulkSelectedUserIds);
+      messageApi.success(`Deleted ${bulkSelectedUserIds.length} user(s)`);
+      setBulkSelectedUserIds([]);
+      load();
+    } catch (err: any) {
+      messageApi.error(getErrorMessage(err));
+    }
+  };
+
   const handleUnlockUser = async (user: User) => {
     try {
       await userApi.unlock(user.id);
@@ -283,6 +310,7 @@ export default function UsersPage() {
   const handleCreateRole = () => {
     setEditingRole(null);
     roleForm.resetFields();
+    setRoleName('');
     setSelectedRolePerms([]);
     setRoleModalOpen(true);
   };
@@ -293,6 +321,7 @@ export default function UsersPage() {
       return;
     }
     setEditingRole(role);
+    setRoleName(role.name);
     roleForm.setFieldsValue({ name: role.name });
     setSelectedRolePerms(role.permissions?.map((p) => p.id) || []);
     setRoleModalOpen(true);
@@ -306,6 +335,26 @@ export default function UsersPage() {
     try {
       await roleApi.remove(id);
       messageApi.success("Role deleted");
+      load();
+    } catch (err: any) {
+      messageApi.error(getErrorMessage(err));
+    }
+  };
+
+  const handleBulkDeleteRoles = async () => {
+    if (!bulkSelectedRoleIds.length) {
+      messageApi.warning("Please select roles to delete");
+      return;
+    }
+    const adminRoles = roles.filter(r => bulkSelectedRoleIds.includes(r.id) && r.name === "ADMIN");
+    if (adminRoles.length) {
+      messageApi.warning("ADMIN role cannot be deleted");
+      return;
+    }
+    try {
+      await roleApi.bulkDelete(bulkSelectedRoleIds);
+      messageApi.success(`Deleted ${bulkSelectedRoleIds.length} role(s)`);
+      setBulkSelectedRoleIds([]);
       load();
     } catch (err: any) {
       messageApi.error(getErrorMessage(err));
@@ -603,20 +652,24 @@ export default function UsersPage() {
               <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} title="Edit" />
               <Button size="small" icon={<CrownOutlined />} onClick={() => handleOpenPlanModal(record)} title="Change Plan" />
               <Button size="small" icon={<SafetyOutlined />} onClick={() => handleOpenPerms(record)} title="Individual Permissions" />
-              {record.status === "INACTIVE" ? (
-                record.isEmailVerified ? (
-                  <Popconfirm title="Activate this user?" onConfirm={() => handleToggleStatus(record)}>
-                    <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#52c41a", borderColor: "#52c41a" }} title="Activate" />
-                  </Popconfirm>
-                ) : (
-                  <Tooltip title="Email not verified">
-                    <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#d9d9d9", borderColor: "#d9d9d9" }} disabled title="Email not verified" />
-                  </Tooltip>
-                )
-              ) : (
-                <Popconfirm title="Disable this user?" onConfirm={() => handleToggleStatus(record)}>
-                  <Button size="small" icon={<StopOutlined />} style={{ color: "#ff4d4f", borderColor: "#ff4d4f" }} title="Disable" />
-                </Popconfirm>
+              {record.role?.name !== "ADMIN" && (
+                <>
+                  {record.status === "INACTIVE" ? (
+                    record.isEmailVerified ? (
+                      <Popconfirm title="Activate this user?" onConfirm={() => handleToggleStatus(record)}>
+                        <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#52c41a", borderColor: "#52c41a" }} title="Activate" />
+                      </Popconfirm>
+                    ) : (
+                      <Tooltip title="Email not verified">
+                        <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#d9d9d9", borderColor: "#d9d9d9" }} disabled title="Email not verified" />
+                      </Tooltip>
+                    )
+                  ) : (
+                    <Popconfirm title="Disable this user?" onConfirm={() => handleToggleStatus(record)}>
+                      <Button size="small" icon={<StopOutlined />} style={{ color: "#ff4d4f", borderColor: "#ff4d4f" }} title="Disable" />
+                    </Popconfirm>
+                  )}
+                </>
               )}
               {isLocked && (
                 <Popconfirm title="Unlock this account?" onConfirm={() => handleUnlockUser(record)}>
@@ -701,12 +754,40 @@ export default function UsersPage() {
             label: "Users",
             children: (
               <>
-                {hasReadAll && (
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateUser} style={{ marginBottom: 16 }}>
-                    Create User
-                  </Button>
-                )}
-                <Table loading={loading} columns={userColumns} dataSource={users} rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: usersPagination.current, pageSize: usersPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} users`, onChange: (page, size) => setUsersPagination({ current: page, pageSize: size }) }} />
+                <Space style={{ marginBottom: 16 }}>
+                  {hasReadAll && (
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateUser}>
+                      Create User
+                    </Button>
+                  )}
+                  {hasReadAll && bulkSelectedUserIds.length > 0 && (
+                    <Popconfirm
+                      title={`Delete ${bulkSelectedUserIds.length} selected user(s)?`}
+                      onConfirm={handleBulkDeleteUsers}
+                      okText="Delete"
+                      okType="danger"
+                    >
+                      <Button danger icon={<DeleteOutlined />}>
+                        Delete Selected ({bulkSelectedUserIds.length})
+                      </Button>
+                    </Popconfirm>
+                  )}
+                </Space>
+                <Table
+                  loading={loading}
+                  columns={userColumns}
+                  dataSource={users}
+                  rowKey="id"
+                  scroll={{ x: 'max-content' }}
+                  pagination={{ current: usersPagination.current, pageSize: usersPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} users`, onChange: (page, size) => setUsersPagination({ current: page, pageSize: size }) }}
+                  rowSelection={hasReadAll ? {
+                    selectedRowKeys: bulkSelectedUserIds,
+                    onChange: (keys) => setBulkSelectedUserIds(keys.map(k => String(k))),
+                    getCheckboxProps: (record: User) => ({
+                      disabled: record.role?.name === "ADMIN" || record.id === currentUserId,
+                    }),
+                  } : undefined}
+                />
               </>
             ),
           },
@@ -717,10 +798,38 @@ export default function UsersPage() {
                   label: "Roles",
                   children: (
                     <>
-                      <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateRole} style={{ marginBottom: 16 }}>
-                        Create Role
-                      </Button>
-                      <Table loading={loading} columns={roleColumns} dataSource={roles} rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: rolesPagination.current, pageSize: rolesPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} roles`, onChange: (page, size) => setRolesPagination({ current: page, pageSize: size }) }} />
+                      <Space style={{ marginBottom: 16 }}>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateRole}>
+                          Create Role
+                        </Button>
+                        {bulkSelectedRoleIds.length > 0 && (
+                          <Popconfirm
+                            title={`Delete ${bulkSelectedRoleIds.length} selected role(s)?`}
+                            onConfirm={handleBulkDeleteRoles}
+                            okText="Delete"
+                            okType="danger"
+                          >
+                            <Button danger icon={<DeleteOutlined />}>
+                              Delete Selected ({bulkSelectedRoleIds.length})
+                            </Button>
+                          </Popconfirm>
+                        )}
+                      </Space>
+                      <Table
+                        loading={loading}
+                        columns={roleColumns}
+                        dataSource={roles}
+                        rowKey="id"
+                        scroll={{ x: 'max-content' }}
+                        pagination={{ current: rolesPagination.current, pageSize: rolesPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} roles`, onChange: (page, size) => setRolesPagination({ current: page, pageSize: size }) }}
+                        rowSelection={{
+                          selectedRowKeys: bulkSelectedRoleIds,
+                          onChange: (keys) => setBulkSelectedRoleIds(keys.map(k => String(k))),
+                          getCheckboxProps: (record: Role) => ({
+                            disabled: record.name === "ADMIN",
+                          }),
+                        }}
+                      />
                     </>
                   ),
                 },
@@ -862,8 +971,21 @@ export default function UsersPage() {
         style={{ maxWidth: '90vw' }}
       >
         <Form form={roleForm} layout="vertical">
-          <Form.Item name="name" label="Role Name" rules={[{ required: true }]}>
-            <Input disabled={editingRole?.name === "ADMIN"} />
+          <Form.Item 
+            name="name" 
+            label="Role Name" 
+            rules={[{ required: true }]}
+          >
+            <Input 
+              disabled={editingRole?.name === "ADMIN"} 
+              value={roleName}
+              style={{ textTransform: 'uppercase' }}
+              onChange={(e) => {
+                const upperValue = e.target.value.toUpperCase();
+                setRoleName(upperValue);
+                roleForm.setFieldsValue({ name: upperValue });
+              }}
+            />
           </Form.Item>
         </Form>
         <Divider>Permissions</Divider>

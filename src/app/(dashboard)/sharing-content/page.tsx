@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Table, Button, Modal, Form, Input, Space, message, Popconfirm, Typography, AutoComplete, Select, Tooltip } from "antd";
+import { Table, Button, Modal, Form, Input, Space, message, Popconfirm, Typography, AutoComplete, Select, Tooltip, Segmented } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, UserOutlined, YoutubeOutlined, TikTokOutlined, FacebookOutlined, InstagramOutlined, LinkedinOutlined, TwitterOutlined, GithubOutlined, GlobalOutlined, MailOutlined, PhoneOutlined, StarOutlined, LinkOutlined as LinkIconOutlined } from "@ant-design/icons";
 import { sharingApi, dashboardApi, userApi, uploadApi } from "@/lib/api";
 import { formatDate } from "@/utils/helpers";
 import type { SharingContent, User } from "@/types";
+import PhoneInput from "@/components/PhoneInput";
 
 interface IconItem {
   name: string;
@@ -48,6 +49,8 @@ export default function SharingContentPage() {
   const [canDelete, setCanDelete] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [urlType, setUrlType] = useState<string>("link");
 
   const userOptions = useMemo(() =>
     users.map((u) => ({
@@ -104,12 +107,25 @@ export default function SharingContentPage() {
   const handleCreate = () => {
     setEditingItem(null);
     form.resetFields();
+    setUrlType("link");
     setModalOpen(true);
   };
 
   const handleEdit = (item: SharingContent) => {
     setEditingItem(item);
-    form.setFieldsValue(item);
+    // Detect URL type from existing URL
+    if (item.url.startsWith("tel:")) {
+      setUrlType("phone");
+      // Extract phone number without tel: prefix
+      form.setFieldsValue({ ...item, url: item.url.substring(4) });
+    } else if (item.url.startsWith("mailto:")) {
+      setUrlType("email");
+      // Extract email without mailto: prefix
+      form.setFieldsValue({ ...item, url: item.url.substring(7) });
+    } else {
+      setUrlType("link");
+      form.setFieldsValue(item);
+    }
     setModalOpen(true);
   };
 
@@ -123,15 +139,49 @@ export default function SharingContentPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!selectedRowKeys.length) {
+      messageApi.warning("Please select items to delete");
+      return;
+    }
+    try {
+      const ids = selectedRowKeys.map(key => String(key));
+      const deletableItems = items.filter(item => {
+        const isOwner = item.userId === currentUserId;
+        return hasReadAll || (canDelete && isOwner);
+      });
+      const deletableIds = deletableItems.map(item => item.id).filter(id => ids.includes(id));
+      if (!deletableIds.length) {
+        messageApi.warning("No deletable items selected");
+        return;
+      }
+      await sharingApi.bulkDelete(deletableIds);
+      messageApi.success(`Deleted ${deletableIds.length} item(s)`);
+      setSelectedRowKeys([]);
+      load();
+    } catch {
+      messageApi.error("Failed to delete selected items");
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       setModalLoading(true);
       const values = await form.validateFields();
+      
+      // Format URL based on type
+      let formattedUrl = values.url;
+      if (urlType === "phone") {
+        formattedUrl = `tel:${values.url}`;
+      } else if (urlType === "email") {
+        formattedUrl = `mailto:${values.url}`;
+      }
+      
       if (editingItem) {
-        await sharingApi.update({ id: editingItem.id, itemName: values.itemName, url: values.url, icon: values.icon });
+        await sharingApi.update({ id: editingItem.id, itemName: values.itemName, url: formattedUrl, icon: values.icon });
         messageApi.success("Updated");
       } else {
-        const payload: any = { itemName: values.itemName, url: values.url, icon: values.icon };
+        const payload: any = { itemName: values.itemName, url: formattedUrl, icon: values.icon };
         if (values.targetUserId) payload.targetUserId = values.targetUserId;
         await sharingApi.create(payload);
         messageApi.success("Created");
@@ -159,13 +209,21 @@ export default function SharingContentPage() {
       filterSearch: true,
       filters: items.map((i) => ({ text: i.url, value: i.url })),
       onFilter: (value: any, record: SharingContent) => record.url === value,
-      render: (url: string) => (
-        <Tooltip title={url}>
-          <Typography.Link href={url} target="_blank" style={{ maxWidth: 220 }}>
-            <LinkOutlined /> <Typography.Text ellipsis style={{ maxWidth: 180 }}>{url}</Typography.Text>
-          </Typography.Link>
-        </Tooltip>
-      ),
+      render: (url: string) => {
+        const getIcon = () => {
+          if (url.startsWith("tel:")) return <PhoneOutlined style={{ color: "#34a853" }} />;
+          if (url.startsWith("mailto:")) return <MailOutlined style={{ color: "#ea4335" }} />;
+          return <LinkOutlined style={{ color: "#4f46e5" }} />;
+        };
+        const displayUrl = url.startsWith("tel:") ? url.substring(4) : url.startsWith("mailto:") ? url.substring(7) : url;
+        return (
+          <Tooltip title={url}>
+            <Typography.Link href={url} target="_blank" style={{ maxWidth: 220 }}>
+              {getIcon()} <Typography.Text ellipsis style={{ maxWidth: 180 }}>{displayUrl}</Typography.Text>
+            </Typography.Link>
+          </Tooltip>
+        );
+      },
     },
     { title: "Icon", dataIndex: "icon", key: "icon", filterSearch: true,
       filters: [...new Set(items.map((i) => i.icon))].map((n) => ({ text: n, value: n })),
@@ -223,12 +281,42 @@ export default function SharingContentPage() {
   return (
     <>
       {contextHolder}
-      {canCreate && (
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate} style={{ marginBottom: 16 }}>
-          Create
-        </Button>
-      )}
-      <Table loading={loading} columns={columns} dataSource={items} rowKey="id" scroll={{ x: "max-content" }} pagination={{ current: pagination.current, pageSize: pagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} items`, onChange: (page, size) => setPagination({ current: page, pageSize: size }) }} />
+      <Space style={{ marginBottom: 16 }}>
+        {canCreate && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            Create
+          </Button>
+        )}
+        {canDelete && selectedRowKeys.length > 0 && (
+          <Popconfirm
+            title={`Delete ${selectedRowKeys.length} selected item(s)?`}
+            onConfirm={handleBulkDelete}
+            okText="Delete"
+            okType="danger"
+          >
+            <Button danger icon={<DeleteOutlined />}>
+              Delete Selected ({selectedRowKeys.length})
+            </Button>
+          </Popconfirm>
+        )}
+      </Space>
+      <Table
+        loading={loading}
+        columns={columns}
+        dataSource={items}
+        rowKey="id"
+        scroll={{ x: "max-content" }}
+        pagination={{ current: pagination.current, pageSize: pagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} items`, onChange: (page, size) => setPagination({ current: page, pageSize: size }) }}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys),
+          getCheckboxProps: (record: SharingContent) => {
+            const isOwner = record.userId === currentUserId;
+            const canRemove = hasReadAll || (canDelete && isOwner);
+            return { disabled: !canRemove };
+          },
+        }}
+      />
 
       <Modal
         title={editingItem ? "Edit" : "Create"}
@@ -236,6 +324,7 @@ export default function SharingContentPage() {
         onOk={handleSubmit}
         confirmLoading={modalLoading}
         onCancel={() => setModalOpen(false)}
+        width={600}
       >
         <Form form={form} layout="vertical">
           {hasReadAll && (
@@ -251,10 +340,44 @@ export default function SharingContentPage() {
             </Form.Item>
           )}
           <Form.Item name="itemName" label="Item Name" rules={[{ required: true }]}>
-            <Input placeholder="e.g. YouTube" />
+            <Input placeholder="e.g. YouTube, Phone, Email" />
           </Form.Item>
-          <Form.Item name="url" label="URL" rules={[{ required: true, message: "Please enter a URL" }]}>
-            <Input placeholder="https://youtube.com/@user or mailto:email@example.com" />
+          <Form.Item label="URL Type">
+            <Segmented
+              value={urlType}
+              onChange={(value) => {
+                setUrlType(value as string);
+                form.setFieldValue("url", "");
+              }}
+              options={[
+                { label: "Link", value: "link", icon: <LinkOutlined /> },
+                { label: "Email", value: "email", icon: <MailOutlined /> },
+                { label: "Phone", value: "phone", icon: <PhoneOutlined /> },
+              ]}
+              block
+            />
+          </Form.Item>
+          <Form.Item 
+            name="url" 
+            label={urlType === "link" ? "URL" : urlType === "email" ? "Email Address" : "Phone Number"} 
+            rules={[{ required: true, message: `Please enter ${urlType === "link" ? "a URL" : urlType === "email" ? "an email" : "a phone number"}` }]}
+          >
+            {urlType === "phone" ? (
+              <PhoneInput 
+                placeholder="Enter phone number"
+              />
+            ) : urlType === "email" ? (
+              <Input 
+                placeholder="email@example.com" 
+                prefix={<MailOutlined />}
+                type="email"
+              />
+            ) : (
+              <Input 
+                placeholder="https://youtube.com/@user" 
+                prefix={<LinkOutlined />}
+              />
+            )}
           </Form.Item>
           <Form.Item name="icon" label="Icon" rules={[{ required: true }]}>
             <Select

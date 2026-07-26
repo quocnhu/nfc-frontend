@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Card, Typography, Tag, Divider, Row, Col, Modal, Upload, Slider, message, Progress, Button } from "antd";
 import {
   UserOutlined,
@@ -17,6 +17,7 @@ import {
   LinkOutlined,
   CopyOutlined,
   CheckOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import dynamic from "next/dynamic";
 import { QRCodeSVG } from "qrcode.react";
@@ -58,6 +59,7 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [avatarHistory, setAvatarHistory] = useState<{ name: string; url: string; path: string }[]>([]);
+  const qrRef = useRef<HTMLDivElement>(null);
 
   const initials = (user?.name || "U")
     .split(" ")
@@ -142,6 +144,29 @@ export default function ProfilePage() {
     } catch (err: any) {
       messageApi.error(err?.response?.data?.message || "Failed to select avatar");
     }
+  };
+
+  const handleDownloadQR = () => {
+    const svgElement = qrRef.current?.querySelector("svg");
+    if (!svgElement) return;
+
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+
+    canvas.width = 512;
+    canvas.height = 512;
+
+    img.onload = () => {
+      ctx?.drawImage(img, 0, 0, 512, 512);
+      const link = document.createElement("a");
+      link.download = `qr-${user?.name || "profile"}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    };
+
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
   };
 
   const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/public/user?userId=${(user as any)?.id || ""}`;
@@ -282,10 +307,18 @@ export default function ProfilePage() {
               }}
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
-            <div style={{ padding: 16, borderRadius: 12, background: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 16 }}>
+            <div ref={qrRef} style={{ padding: 16, borderRadius: 12, background: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
               <QRCodeSVG value={publicUrl} size={160} />
             </div>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadQR}
+              style={{ marginTop: 12 }}
+            >
+              Download QR Code
+            </Button>
           </div>
         </div>
 

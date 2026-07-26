@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Table, Button, Space, Tag, Typography, Card, message, Popconfirm, Avatar, Radio } from "antd";
-import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, StopOutlined } from "@ant-design/icons";
+import { Table, Button, Space, Tag, Typography, Card, message, Popconfirm, Avatar, DatePicker, Modal, List } from "antd";
+import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, StopOutlined, CalendarOutlined } from "@ant-design/icons";
 import { paymentApi } from "@/lib/api";
 import { useSession } from "next-auth/react";
+import dayjs from "dayjs";
 import type { UserSubscription } from "@/types";
+import type { Dayjs } from "dayjs";
+
+const { RangePicker } = DatePicker;
+
+interface CleanedUser {
+  userId: string;
+  fullname: string;
+  email: string;
+}
 
 export default function SubscriptionsPage() {
   const router = useRouter();
@@ -15,8 +25,10 @@ export default function SubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
-  const [period, setPeriod] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [counts, setCounts] = useState({ total: 0, active: 0, expired: 0 });
+  const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
+  const [cleanedUsers, setCleanedUsers] = useState<CleanedUser[]>([]);
 
   const user = session?.user as any;
   const isAdmin = user?.role === "ADMIN";
@@ -29,15 +41,16 @@ export default function SubscriptionsPage() {
     loadSubscriptions();
   }, [isAdmin, router]);
 
-  const loadSubscriptions = async (selectedPeriod?: string) => {
+  const loadSubscriptions = async (dates?: [Dayjs | null, Dayjs | null] | null) => {
     setLoading(true);
     try {
-      const p = selectedPeriod ?? period;
-      const res = await paymentApi.subscriptions(p === "all" ? undefined : p);
+      const range = dates ?? dateRange;
+      const startDate = range?.[0]?.format("YYYY-MM-DD");
+      const endDate = range?.[1]?.format("YYYY-MM-DD");
+      const res = await paymentApi.subscriptions(startDate, endDate);
       const data = res.data?.data;
       if (data && Array.isArray(data)) {
         setSubscriptions(data);
-        const now = new Date();
         setCounts({
           total: data.length,
           active: data.filter((s: UserSubscription) => s.isCurrent && s.status === "ACTIVE").length,
@@ -54,9 +67,9 @@ export default function SubscriptionsPage() {
     }
   };
 
-  const handlePeriodChange = (value: string) => {
-    setPeriod(value);
-    loadSubscriptions(value);
+  const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+    setDateRange(dates);
+    loadSubscriptions(dates);
   };
 
   const handleCancelSubscription = async (userId: string) => {
@@ -76,9 +89,17 @@ export default function SubscriptionsPage() {
     try {
       setProcessing("cleanup");
       const res = await paymentApi.cleanupExpired();
-      const cleanedCount = res.data?.data?.cleanedCount || 0;
-      messageApi.success(`Cleaned up ${cleanedCount} expired subscriptions`);
-      loadSubscriptions();
+      const data = res.data?.data;
+      const cleanedCount = data?.cleanedCount || 0;
+      const users = data?.cleanedUsers || [];
+      
+      if (cleanedCount === 0) {
+        messageApi.info("No expired subscriptions found");
+      } else {
+        setCleanedUsers(users);
+        setCleanupModalOpen(true);
+        loadSubscriptions();
+      }
     } catch {
       messageApi.error("Failed to cleanup expired subscriptions");
     } finally {
@@ -116,6 +137,8 @@ export default function SubscriptionsPage() {
     {
       title: "User",
       key: "user",
+      filters: [...new Set(subscriptions.map((s) => s.user?.fullname).filter(Boolean))].map((name) => ({ text: name!, value: name! })),
+      onFilter: (value: any, record: UserSubscription) => record.user?.fullname === value,
       render: (_: any, record: UserSubscription) => (
         <Space>
           <Avatar size="small" src={record.user?.avatarUrl}>
@@ -134,23 +157,29 @@ export default function SubscriptionsPage() {
     {
       title: "Plan",
       key: "plan",
+      filters: [...new Set(subscriptions.map((s) => s.plan?.name).filter(Boolean))].map((name) => ({ text: name!, value: name! })),
+      onFilter: (value: any, record: UserSubscription) => record.plan?.name === value,
       render: (_: any, record: UserSubscription) => getPlanTag(record.plan?.name),
     },
     {
       title: "Status",
       key: "status",
+      filters: [...new Set(subscriptions.map((s) => s.status))].map((status) => ({ text: status, value: status })),
+      onFilter: (value: any, record: UserSubscription) => record.status === value,
       render: (_: any, record: UserSubscription) => getStatusTag(record.status),
     },
     {
       title: "Start Date",
       dataIndex: "startDate",
       key: "startDate",
+      sorter: (a: UserSubscription, b: UserSubscription) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
       title: "End Date",
       dataIndex: "endDate",
       key: "endDate",
+      sorter: (a: UserSubscription, b: UserSubscription) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime(),
       render: (date: string) => {
         const endDate = new Date(date);
         const now = new Date();
@@ -165,6 +194,8 @@ export default function SubscriptionsPage() {
     {
       title: "Current",
       key: "isCurrent",
+      filters: [{ text: "Yes", value: true }, { text: "No", value: false }],
+      onFilter: (value: any, record: UserSubscription) => record.isCurrent === value,
       render: (_: any, record: UserSubscription) => (
         record.isCurrent ? <Tag color="green">Yes</Tag> : <Tag>No</Tag>
       ),
@@ -229,19 +260,16 @@ export default function SubscriptionsPage() {
             </Typography.Title>
           </div>
         </Space>
-        <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Radio.Group
-            value={period}
-            onChange={(e) => handlePeriodChange(e.target.value)}
-            optionType="button"
-            buttonStyle="solid"
-          >
-            <Radio.Button value="all">All</Radio.Button>
-            <Radio.Button value="day">Today</Radio.Button>
-            <Radio.Button value="week">This Week</Radio.Button>
-            <Radio.Button value="month">This Month</Radio.Button>
-            <Radio.Button value="year">This Year</Radio.Button>
-          </Radio.Group>
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <Space>
+            <CalendarOutlined />
+            <RangePicker
+              value={dateRange}
+              onChange={handleDateRangeChange}
+              placeholder={["Start Date", "End Date"]}
+              style={{ width: 280 }}
+            />
+          </Space>
           <Popconfirm
             title="Cleanup expired subscriptions?"
             description="This will mark all expired subscriptions and update user statuses"
@@ -271,6 +299,37 @@ export default function SubscriptionsPage() {
           showTotal: (total) => `Total ${total} subscriptions`,
         }}
       />
+
+      <Modal
+        title="Cleanup Complete"
+        open={cleanupModalOpen}
+        onCancel={() => setCleanupModalOpen(false)}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setCleanupModalOpen(false)}>
+            Close
+          </Button>,
+        ]}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Typography.Text strong>
+            {cleanedUsers.length} expired subscription{cleanedUsers.length !== 1 ? "s" : ""} cleaned up
+          </Typography.Text>
+        </div>
+        <List
+          size="small"
+          dataSource={cleanedUsers}
+          renderItem={(user) => (
+            <List.Item>
+              <List.Item.Meta
+                avatar={<Avatar size="small">{user.fullname?.charAt(0)}</Avatar>}
+                title={user.fullname}
+                description={user.email}
+              />
+              <Tag color="red">INACTIVE</Tag>
+            </List.Item>
+          )}
+        />
+      </Modal>
     </div>
   );
 }

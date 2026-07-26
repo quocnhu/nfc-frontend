@@ -139,8 +139,14 @@ const CARD_COLORS = [
 ];
 
 interface Props {
-  user: { fullname: string; avatarUrl?: string; email: string };
+  user: { fullname: string; avatarUrl?: string; email: string; role?: { id: string; name: string } };
   items: { id: string; url: string; itemName: string; icon: string; iconUrl?: string }[];
+}
+
+function formatRole(name: string): string {
+  return name
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export default function VipTemplate({ user, items }: Props) {
@@ -217,13 +223,29 @@ export default function VipTemplate({ user, items }: Props) {
             </div>
 
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}>
-              <Title level={2} style={{ color: COLORS.textPrimary, marginTop: 22, marginBottom: 4, fontWeight: 700 }}>{user.fullname}</Title>
-              <Text style={{ color: COLORS.textSecondary, fontSize: 14 }}>{user.email}</Text>
+              <Title level={2} style={{ color: COLORS.textPrimary, marginTop: 22, marginBottom: 4, fontWeight: 700, textShadow: "0 2px 15px rgba(255, 176, 32, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)" }}>{user.fullname}</Title>
+              {user.role && (
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{
+                    display: "inline-block",
+                    padding: "4px 14px",
+                    borderRadius: "12px",
+                    background: `rgba(${COLORS.accent}, 0.15)`,
+                    border: `1px solid rgba(${COLORS.accent}, 0.4)`,
+                    color: `rgb(${COLORS.accent})`,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    letterSpacing: 0.5,
+                  }}>
+                    {formatRole(user.role.name)}
+                  </span>
+                </div>
+              )}
             </motion.div>
           </motion.div>
 
           {/* Items */}
-          <Flex vertical gap={14}>
+          <Flex vertical gap={10}>
             {items.map((item, i) => {
               const c = CARD_COLORS[i % CARD_COLORS.length];
               return (
@@ -239,8 +261,8 @@ export default function VipTemplate({ user, items }: Props) {
                   <div
                     onClick={() => openItem(item.url, item.itemName)}
                     style={{
-                      padding: "18px 24px",
-                      borderRadius: 20,
+                      padding: "10px 16px",
+                      borderRadius: 14,
                       cursor: "pointer",
                       background: `linear-gradient(135deg, ${c.bg} 0%, rgba(255,255,255,0.02) 100%)`,
                       border: `1px solid ${c.border}`,
@@ -259,13 +281,13 @@ export default function VipTemplate({ user, items }: Props) {
                       e.currentTarget.style.background = `linear-gradient(135deg, ${c.bg} 0%, rgba(255,255,255,0.02) 100%)`;
                     }}
                   >
-                    <Flex align="center" gap={18}>
+                    <Flex align="center" gap={12}>
                       <div 
                         style={{ 
-                          fontSize: 28, 
+                          fontSize: 22, 
                           color: c.icon, 
-                          width: 48, 
-                          height: 48, 
+                          width: 38, 
+                          height: 38, 
                           display: "flex", 
                           alignItems: "center", 
                           justifyContent: "center",
@@ -276,12 +298,12 @@ export default function VipTemplate({ user, items }: Props) {
                         }}
                       >
                         {item.iconUrl ? (
-                          <img src={item.iconUrl} alt={item.itemName} style={{ width: 34, height: 34, objectFit: "contain" }} />
+                          <img src={item.iconUrl} alt={item.itemName} style={{ width: 26, height: 26, objectFit: "contain" }} />
                         ) : (
                           getIcon(item.icon)
                         )}
                       </div>
-                      <Text style={{ color: COLORS.textPrimary, fontSize: 18, fontWeight: 600, letterSpacing: 0.3 }}>{item.itemName}</Text>
+                      <Text style={{ color: COLORS.textPrimary, fontSize: 15, fontWeight: 600, letterSpacing: 0.3 }}>{item.itemName}</Text>
                     </Flex>
                   </div>
                 </motion.div>
@@ -298,7 +320,7 @@ export default function VipTemplate({ user, items }: Props) {
         transition={{ delay: 0.6, duration: 0.5, ease: "easeOut" }}
         style={{ textAlign: "center", padding: "20px 0 12px", position: "relative", zIndex: 1 }}
       >
-        <Text style={{ color: COLORS.textTertiary, fontSize: 12, letterSpacing: 0.3 }}>
+        <Text style={{ color: COLORS.textTertiary, fontSize: 12, letterSpacing: 0.3, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
           Designed by <span style={{ color: COLORS.textSecondary, fontWeight: 600 }}>Nguyen Quoc Nhu</span> - <span style={{ color: `rgb(${COLORS.accent})`, fontWeight: 500 }}>NFC Tap</span>
         </Text>
       </motion.div>

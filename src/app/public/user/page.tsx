@@ -1,135 +1,100 @@
-"use client";
+'use client';
 
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Flex, Spin, Input, Button, Typography, Space, Card, Result } from "antd";
-import { SearchOutlined, LockOutlined, WarningOutlined } from "@ant-design/icons";
-import { sharingApi } from "@/lib/api";
-import VipTemplate from "@/components/templates/VipTemplate";
-import UserTemplate from "@/components/templates/UserTemplate";
+import React, { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Flex, Spin, Alert } from 'antd';
+import UserTemplate from '@/components/templates/UserTemplate';
+import VipTemplate from '@/components/templates/VipTemplate';
 
-function PublicUserContent() {
+const BG = '#0a0a0a';
+
+function PublicUserPageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const [userId, setUserId] = useState(searchParams.get("userId") || "");
+  const userId = searchParams.get('userId');
+
   const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = async (id: string) => {
-    if (!id.trim()) return;
-    setLoading(true);
-    setError(null);
-    setData(null);
-    try {
-      const profileRes = await sharingApi.publicByUser(id.trim());
-      const profile = profileRes.data?.data;
-      
-      if (profile) {
-        setData(profile);
-      } else {
-        router.replace("/");
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      if (msg === "NFC_EXPIRED") {
-        setError("NFC_EXPIRED");
-      } else {
-        router.replace("/");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    const paramId = searchParams.get("userId");
-    if (paramId) {
-      setUserId(paramId);
-      fetchProfile(paramId);
+    if (!userId) {
+      setError('No userId provided');
+      setLoading(false);
+      return;
     }
-  }, []);
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/backend-api/sharing-content/public/user?userId=${userId}`);
+        const json = await res.json();
+
+        if (!res.ok) {
+          throw new Error(json.message || 'Failed to fetch profile');
+        }
+
+        setData(json.data);
+      } catch (err: any) {
+        setError(err.message || 'Something went wrong');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userId]);
 
   if (loading) {
     return (
-      <Flex justify="center" align="center" style={{ minHeight: "100vh", background: "#f0f2f5" }}>
-        <Spin size="large" />
+      <Flex justify="center" align="center" style={{ height: '100vh', width: '100vw', background: BG, position: 'fixed', top: 0, left: 0, zIndex: 9999 }}>
+        <Spin size="large" style={{ fontSize: 48 }} />
       </Flex>
     );
   }
 
-  if (error === "NFC_EXPIRED") {
+  if (error) {
     return (
-      <div style={{ minHeight: "100vh", background: "#f0f2f5", display: "flex", justifyContent: "center", alignItems: "center", padding: 24 }}>
-        <Card style={{ maxWidth: 500, width: "100%" }}>
-          <Result
-            icon={<LockOutlined style={{ color: "#faad14" }} />}
-            title="NFC Service Expired"
-            subTitle="This NFC service has expired or been disabled. The owner needs to login and renew the service."
-            extra={
-              <Button
-                type="primary"
-                icon={<WarningOutlined />}
-                disabled
-                size="large"
-              >
-                Service Unavailable
-              </Button>
-            }
-          />
-        </Card>
-      </div>
+      <Flex justify="center" align="center" style={{ height: '100vh', background: BG, padding: 20 }}>
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          style={{ maxWidth: 400 }}
+        />
+      </Flex>
     );
   }
 
-  if (data) {
-    const role = data.role?.name || "USER";
-    const subStatus = data.subscription?.status;
-    const subPlan = data.subscription?.plan?.name;
-
-    if (role === "VIP" && subStatus === "ACTIVE") {
-      return <VipTemplate user={data} items={data.sharingContent || []} />;
-    }
-    return <UserTemplate user={data} items={data.sharingContent || []} />;
+  if (!data) {
+    return (
+      <Flex justify="center" align="center" style={{ height: '100vh', background: BG }}>
+        <Alert message="Not Found" description="User profile not found." type="warning" showIcon />
+      </Flex>
+    );
   }
 
-  return (
-    <div style={{ minHeight: "100vh", background: "#f0f2f5", display: "flex", justifyContent: "center", alignItems: "center", padding: 24 }}>
-      <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
-        <Typography.Title level={3} style={{ marginBottom: 8 }}>NFC Tap Profile</Typography.Title>
-        <Typography.Text type="secondary" style={{ display: "block", marginBottom: 24 }}>
-          Enter a user ID to view their profile
-        </Typography.Text>
-        <Space.Compact style={{ width: "100%" }}>
-          <Input
-            placeholder="Enter user ID"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            onPressEnter={() => fetchProfile(userId)}
-          />
-          <Button
-            type="primary"
-            icon={<SearchOutlined />}
-            onClick={() => fetchProfile(userId)}
-            loading={loading}
-          >
-            View
-          </Button>
-        </Space.Compact>
-        {error && (
-          <Typography.Text type="danger" style={{ display: "block", marginTop: 12 }}>
-            {error}
-          </Typography.Text>
-        )}
-      </div>
-    </div>
-  );
+  const user = { fullname: data.fullname, avatarUrl: data.avatarUrl, email: data.email, role: data.role };
+  const items = data.sharingContent || [];
+  const roleName = data.role?.name?.toUpperCase();
+
+  if (roleName === 'VIP') {
+    return <VipTemplate user={user} items={items} />;
+  }
+
+  return <UserTemplate user={user} items={items} />;
 }
 
 export default function PublicUserPage() {
   return (
-    <Suspense fallback={<Spin size="large" />}>
-      <PublicUserContent />
+    <Suspense
+      fallback={
+        <Flex justify="center" align="center" style={{ height: '100vh', width: '100vw', background: BG, position: 'fixed', top: 0, left: 0, zIndex: 9999 }}>
+          <Spin size="large" style={{ fontSize: 48 }} />
+        </Flex>
+      }
+    >
+      <PublicUserPageContent />
     </Suspense>
   );
 }

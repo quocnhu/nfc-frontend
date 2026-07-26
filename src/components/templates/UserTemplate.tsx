@@ -100,8 +100,14 @@ function openItem(url: string, itemName: string) {
 }
 
 interface Props {
-  user: { fullname: string; avatarUrl?: string; email: string };
+  user: { fullname: string; avatarUrl?: string; email: string; role?: { id: string; name: string } };
   items: { id: string; url: string; itemName: string; icon: string; iconUrl?: string }[];
+}
+
+function formatRole(name: string): string {
+  return name
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export default function UserTemplate({ user, items }: Props) {
@@ -169,11 +175,27 @@ export default function UserTemplate({ user, items }: Props) {
               style={{ border: `4px solid ${COLORS.accent}`, position: "relative", zIndex: 1, boxShadow: `0 4px 20px rgba(${COLORS.accentRgb}, 0.25)` }}
             />
           </motion.div>
-          <Title level={3} style={{ marginTop: 20, marginBottom: 4, color: COLORS.textPrimary }}>{user.fullname}</Title>
-          <Text style={{ color: COLORS.textSecondary, fontSize: 14 }}>{user.email}</Text>
+          <Title level={3} style={{ marginTop: 20, marginBottom: 4, color: COLORS.textPrimary, textShadow: "0 2px 10px rgba(79, 70, 229, 0.4), 0 0 20px rgba(255, 255, 255, 0.2)" }}>{user.fullname}</Title>
+          {user.role && (
+            <div style={{ marginBottom: 8 }}>
+              <span style={{
+                display: "inline-block",
+                padding: "4px 12px",
+                borderRadius: "12px",
+                background: "rgba(79, 70, 229, 0.15)",
+                border: "1px solid rgba(79, 70, 229, 0.3)",
+                color: COLORS.accent,
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: 0.5,
+              }}>
+                {formatRole(user.role.name)}
+              </span>
+            </div>
+          )}
         </div>
 
-        <Flex vertical gap={14}>
+        <Flex vertical gap={10}>
           {items.map((item, i) => {
             const c = CARD_COLORS[i % CARD_COLORS.length];
             return (
@@ -192,11 +214,11 @@ export default function UserTemplate({ user, items }: Props) {
                   style={{
                     background: `linear-gradient(135deg, ${c.bg} 0%, rgba(255,255,255,0.03) 100%)`,
                     border: `1px solid ${c.border}`,
-                    borderRadius: 20,
-                    padding: "16px 20px",
+                    borderRadius: 14,
+                    padding: "10px 16px",
                     display: "flex",
                     alignItems: "center",
-                    gap: 16,
+                    gap: 12,
                     boxShadow: `0 4px 20px ${c.bg}, inset 0 1px 0 rgba(255,255,255,0.05)`,
                     cursor: "pointer",
                     transition: "all 0.3s ease",
@@ -212,10 +234,10 @@ export default function UserTemplate({ user, items }: Props) {
                 >
                   <div 
                     style={{ 
-                      fontSize: 24, 
+                      fontSize: 20, 
                       color: c.icon, 
-                      width: 44, 
-                      height: 44, 
+                      width: 36, 
+                      height: 36, 
                       display: "flex", 
                       alignItems: "center", 
                       justifyContent: "center",
@@ -226,12 +248,12 @@ export default function UserTemplate({ user, items }: Props) {
                     }}
                   >
                     {item.iconUrl ? (
-                      <img src={item.iconUrl} alt={item.itemName} style={{ width: 30, height: 30, objectFit: "contain" }} />
+                      <img src={item.iconUrl} alt={item.itemName} style={{ width: 24, height: 24, objectFit: "contain" }} />
                     ) : (
                       getIcon(item.icon)
                     )}
                   </div>
-                  <Text style={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: 600, letterSpacing: 0.3 }}>{item.itemName}</Text>
+                  <Text style={{ color: COLORS.textPrimary, fontSize: 15, fontWeight: 600, letterSpacing: 0.3 }}>{item.itemName}</Text>
                 </div>
               </motion.div>
             );
@@ -239,7 +261,7 @@ export default function UserTemplate({ user, items }: Props) {
         </Flex>
 
         <div style={{ textAlign: "center", marginTop: "auto", paddingTop: 24 }}>
-          <Text style={{ color: COLORS.textTertiary, fontSize: 12 }}>
+          <Text style={{ color: COLORS.textTertiary, fontSize: 12, textShadow: "0 2px 8px rgba(0,0,0,0.6)" }}>
             Designed by <span style={{ color: COLORS.accent, fontWeight: 600 }}>Nguyen Quoc Nhu</span> - <span style={{ color: COLORS.textSecondary, fontWeight: 500 }}>NFC Tap</span>
           </Text>
         </div>

@@ -46,6 +46,7 @@ export default function QRPage() {
   const [creating, setCreating] = useState(false);
   const [form] = Form.useForm();
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/public/user?userId=${(user as any)?.id || ""}`;
 
@@ -94,6 +95,23 @@ export default function QRPage() {
       loadQRCodes();
     } catch (err: any) {
       messageApi.error(err?.response?.data?.message || "Failed to delete");
+    }
+  };
+
+  // ─── Bulk Delete QR ───
+  const handleBulkDelete = async () => {
+    if (!selectedRowKeys.length) {
+      messageApi.warning("Please select QR codes to delete");
+      return;
+    }
+    try {
+      const ids = selectedRowKeys.map(key => String(key));
+      await qrApi.bulkDelete(ids);
+      messageApi.success(`Deleted ${ids.length} QR code(s)`);
+      setSelectedRowKeys([]);
+      loadQRCodes();
+    } catch (err: any) {
+      messageApi.error(err?.response?.data?.message || "Failed to delete selected QR codes");
     }
   };
 
@@ -245,13 +263,27 @@ export default function QRPage() {
                 Create and manage QR codes for your public profile.
               </Typography.Text>
             </div>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setCreateModalOpen(true)}
-            >
-              New QR Code
-            </Button>
+            <Space>
+              {selectedRowKeys.length > 0 && (
+                <Popconfirm
+                  title={`Delete ${selectedRowKeys.length} selected QR code(s)?`}
+                  onConfirm={handleBulkDelete}
+                  okText="Delete"
+                  okType="danger"
+                >
+                  <Button danger icon={<DeleteOutlined />}>
+                    Delete Selected ({selectedRowKeys.length})
+                  </Button>
+                </Popconfirm>
+              )}
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setCreateModalOpen(true)}
+              >
+                New QR Code
+              </Button>
+            </Space>
           </div>
 
           <Table
@@ -262,6 +294,10 @@ export default function QRPage() {
             pagination={{ current: pagination.current, pageSize: pagination.pageSize, showSizeChanger: false, onChange: (page, size) => setPagination({ current: page, pageSize: size }) }}
             locale={{ emptyText: <Empty description="No QR codes yet" /> }}
             scroll={{ x: "max-content" }}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (keys) => setSelectedRowKeys(keys),
+            }}
           />
         </Card>
       </div>

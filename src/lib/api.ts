@@ -49,6 +49,8 @@ export const userApi = {
     api.post<ApiResponse<User>>("/users/update", data),
   remove: (id: string) =>
     api.post<ApiResponse>("/users/delete", { id }),
+  bulkDelete: (ids: string[]) =>
+    api.post<ApiResponse>("/users/bulk-delete", { ids }),
   updateMe: (data: { email?: string; fullname?: string; avatarUrl?: string }) =>
     api.post<ApiResponse<User>>("/users/me/update", data),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
@@ -71,6 +73,8 @@ export const roleApi = {
     api.post<ApiResponse<Role>>("/roles/update", data),
   remove: (id: string) =>
     api.post<ApiResponse>("/roles/delete", { id }),
+  bulkDelete: (ids: string[]) =>
+    api.post<ApiResponse>("/roles/bulk-delete", { ids }),
 };
 
 export const permissionApi = {
@@ -94,6 +98,8 @@ export const sharingApi = {
     api.post<ApiResponse<SharingContent>>("/sharing-content/update", data),
   remove: (id: string) =>
     api.post<ApiResponse>("/sharing-content/delete", { id }),
+  bulkDelete: (ids: string[]) =>
+    api.post<ApiResponse>("/sharing-content/bulk-delete", { ids }),
   publicByUser: (userId: string) =>
     api.get<ApiResponse<{ user: any; items: SharingContent[] }>>(
       "/sharing-content/public/user",
@@ -234,6 +240,8 @@ export const qrApi = {
     api.post<ApiResponse<QRCode>>('/qr', data),
   remove: (id: string) =>
     api.delete<ApiResponse>(`/qr/${id}`),
+  bulkDelete: (ids: string[]) =>
+    api.post<ApiResponse>('/qr/bulk-delete', { ids }),
 };
 
 export const paymentApi = {
@@ -252,25 +260,27 @@ export const paymentApi = {
   publicStatus: (userId: string) =>
     api.get<ApiResponse<PaymentStatus>>("/payment/public-status", { params: { userId } }),
   // Admin subscription management
-  subscriptions: (period?: string) =>
-    api.get<ApiResponse<UserSubscription[] | { subscriptions: UserSubscription[]; counts: { total: number; active: number; expired: number }; period: string }>>('/payment/subscriptions', { params: period ? { period } : undefined }),
+  subscriptions: (startDate?: string, endDate?: string) =>
+    api.get<ApiResponse<UserSubscription[] | { subscriptions: UserSubscription[]; counts: { total: number; active: number; expired: number }; period: string }>>('/subscriptions', { params: startDate && endDate ? { startDate, endDate } : undefined }),
   userSubscriptions: (userId: string) =>
-    api.get<ApiResponse<Subscription[]>>(`/payment/subscriptions/user/${userId}`),
+    api.get<ApiResponse<Subscription[]>>(`/subscriptions/user/${userId}`),
   adminChangePlan: (userId: string, planId: string) =>
-    api.post<ApiResponse>('/payment/admin-change-plan', { userId, planId }),
+    api.post<ApiResponse>('/subscriptions/admin-change-plan', { userId, planId }),
   cancelSubscription: (userId: string) =>
-    api.post<ApiResponse>('/payment/cancel-subscription', { userId }),
+    api.post<ApiResponse>('/subscriptions/cancel', { userId }),
   cleanupExpired: () =>
-    api.post<ApiResponse>('/payment/cleanup-expired'),
+    api.post<ApiResponse>('/subscriptions/cleanup-expired'),
   // Plan management
   getAllPlans: () =>
-    api.get<ApiResponse<any[]>>('/payment/plans/all'),
+    api.get<ApiResponse<any[]>>('/plans'),
   createPlan: (data: { name: string; displayName: string; description?: string; price: number; currency?: string; durationDays: number; isActive?: boolean }) =>
-    api.post<ApiResponse<Plan>>('/payment/plans', data),
+    api.post<ApiResponse<Plan>>('/plans', data),
   updatePlan: (data: { id: string; name?: string; displayName?: string; description?: string; price?: number; currency?: string; durationDays?: number; isActive?: boolean }) =>
-    api.post<ApiResponse<Plan>>('/payment/plans/update', data),
+    api.post<ApiResponse<Plan>>('/plans/update', data),
   deletePlan: (id: string) =>
-    api.post<ApiResponse>('/payment/plans/delete', { id }),
+    api.post<ApiResponse>('/plans/delete', { id }),
+  bulkDeletePlans: (ids: string[]) =>
+    api.post<ApiResponse>('/plans/bulk-delete', { ids }),
 };
 
 export interface HomepageImage {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Layout, Menu, Button, Avatar, Dropdown, Space, Typography, Badge } from "antd";
+import { Layout, Menu, Button, Avatar, Dropdown, Space, Typography, Badge, Spin } from "antd";
 import {
   LogoutOutlined,
   UserOutlined,
@@ -25,6 +25,7 @@ import { useTheme } from "@/components/providers/AntdProvider";
 import { useAvatar } from "@/components/providers/AvatarProvider";
 import { paymentApi } from "@/lib/api";
 import type { PaymentStatus } from "@/types";
+import { RouteLoader } from "@/components/common/RouteLoader";
 
 
 const { Header, Sider, Content } = Layout;
@@ -46,12 +47,12 @@ const routeMap: Record<
   "/subscriptions": {
     icon: <CrownOutlined />,
     label: "Subscriptions",
-    permission: "read:dashboard",
+    permission: "read:subscription",
   },
   "/plans": {
     icon: <DollarOutlined />,
     label: "Plans",
-    permission: "read:dashboard",
+    permission: "read:plan",
   },
   "/sharing-content": {
     icon: <ShareAltOutlined />,
@@ -147,6 +148,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
+      <RouteLoader />
       <Sider
         collapsible
         collapsed={collapsed}
@@ -155,6 +157,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         theme="dark"
         style={{
           borderRight: isDark ? "1px solid #2e2e40" : undefined,
+          display: "flex",
+          flexDirection: "column",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         <div
@@ -184,8 +190,49 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           selectedKeys={[pathname]}
           items={menuItems}
           onClick={({ key }) => router.push(key)}
-          style={{ borderRight: 0 }}
+          style={{ borderRight: 0, flex: 1, overflow: "auto", marginBottom: 80 }}
         />
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: collapsed ? "16px 12px" : "16px 24px",
+            background: "linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%)",
+            transition: "all 0.3s ease",
+            cursor: "default",
+          }}
+          className="sidebar-footer"
+        >
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: collapsed ? 10 : 12,
+                fontWeight: 500,
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                letterSpacing: "0.3px",
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                transition: "all 0.3s ease",
+                textShadow: "0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.3)",
+              }}
+            >
+              {collapsed ? "NQ" : "Designed by Quoc Nhu"}
+            </div>
+          </div>
+          <style jsx>{`
+            .sidebar-footer:hover div:first-child {
+              background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+              transform: scale(1.05);
+            }
+          `}</style>
+        </div>
       </Sider>
 
       <Layout>

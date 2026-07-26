@@ -18,6 +18,7 @@ export default function PlansPage() {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const user = session?.user as any;
   const isAdmin = user?.role === "ADMIN";
@@ -101,6 +102,27 @@ export default function PlansPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!selectedRowKeys.length) {
+      messageApi.warning("Please select plans to delete");
+      return;
+    }
+    const ids = selectedRowKeys.map(key => String(key));
+    const deletablePlans = plans.filter(p => ids.includes(p.id) && (!p._count?.subscriptions || p._count.subscriptions === 0));
+    if (!deletablePlans.length) {
+      messageApi.warning("No deletable plans selected (plans with active subscriptions cannot be deleted)");
+      return;
+    }
+    try {
+      await paymentApi.bulkDeletePlans(deletablePlans.map(p => p.id));
+      messageApi.success(`Deleted ${deletablePlans.length} plan(s)`);
+      setSelectedRowKeys([]);
+      loadPlans();
+    } catch (err: any) {
+      messageApi.error(err?.response?.data?.message || "Failed to delete selected plans");
+    }
+  };
+
   const handleToggleActive = async (plan: any) => {
     try {
       await paymentApi.updatePlan({ id: plan.id, isActive: !plan.isActive });
@@ -116,6 +138,8 @@ export default function PlansPage() {
       title: "Name",
       key: "name",
       align: 'center' as const,
+      filters: [...new Set(plans.map((p) => p.displayName))].map((name) => ({ text: name, value: name })),
+      onFilter: (value: any, record: any) => record.displayName === value,
       render: (_: any, record: any) => (
         <div>
           <div style={{ fontWeight: 600 }}>{record.displayName}</div>
@@ -134,6 +158,15 @@ export default function PlansPage() {
       title: "Price",
       key: "price",
       align: 'center' as const,
+      filters: [
+        { text: "FREE", value: 0 },
+        { text: "Paid", value: "paid" },
+      ],
+      onFilter: (value: any, record: any) => {
+        if (value === 0) return record.price === 0;
+        if (value === "paid") return record.price > 0;
+        return true;
+      },
       render: (_: any, record: any) => (
         <span style={{ fontWeight: 600, color: record.price === 0 ? "#52c41a" : "#1890ff" }}>
           {record.price === 0 ? "FREE" : `$${record.price.toFixed(2)}`}
@@ -145,6 +178,11 @@ export default function PlansPage() {
       dataIndex: "durationDays",
       key: "durationDays",
       align: 'center' as const,
+      filters: [...new Set(plans.map((p) => p.durationDays))].map((days) => ({
+        text: days === 0 ? "30 minutes" : days === 30 ? "1 month" : days === 365 ? "1 year" : `${days} days`,
+        value: days,
+      })),
+      onFilter: (value: any, record: any) => record.durationDays === value,
       render: (days: number) => {
         if (days === 0) return <Tag>30 minutes</Tag>;
         if (days === 30) return <Tag color="blue">1 month</Tag>;
@@ -155,6 +193,8 @@ export default function PlansPage() {
     {
       title: "Status",
       key: "isActive",
+      filters: [{ text: "Active", value: true }, { text: "Inactive", value: false }],
+      onFilter: (value: any, record: any) => record.isActive === value,
       align: 'center' as const,
       render: (_: any, record: any) => (
         <Switch
@@ -169,6 +209,7 @@ export default function PlansPage() {
       title: "Subscriptions",
       key: "subscriptions",
       align: 'center' as const,
+      sorter: (a: any, b: any) => (a._count?.subscriptions || 0) - (b._count?.subscriptions || 0),
       render: (_: any, record: any) => (
         <Tag color={record._count?.subscriptions > 0 ? "blue" : "default"}>
           {record._count?.subscriptions || 0}
@@ -212,11 +253,23 @@ export default function PlansPage() {
     <div>
       {contextHolder}
       
-      <div style={{ marginBottom: 16 }}>
+      <Space style={{ marginBottom: 16 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
           Create Plan
         </Button>
-      </div>
+        {selectedRowKeys.length > 0 && (
+          <Popconfirm
+            title={`Delete ${selectedRowKeys.length} selected plan(s)?`}
+            onConfirm={handleBulkDelete}
+            okText="Delete"
+            okType="danger"
+          >
+            <Button danger icon={<DeleteOutlined />}>
+              Delete Selected ({selectedRowKeys.length})
+            </Button>
+          </Popconfirm>
+        )}
+      </Space>
 
       <Table
         columns={columns}
@@ -224,6 +277,13 @@ export default function PlansPage() {
         rowKey="id"
         loading={loading}
         pagination={false}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys),
+          getCheckboxProps: (record: any) => ({
+            disabled: record._count?.subscriptions > 0,
+          }),
+        }}
       />
 
       <Modal

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Row, Col, List, Tag, Typography, Avatar, Tooltip, Button, Badge, Radio, Spin, Card } from "antd";
+import { Row, Col, List, Tag, Typography, Avatar, Tooltip, Button, Badge, DatePicker, Spin, Card } from "antd";
 import {
   UserOutlined,
   TeamOutlined,
@@ -26,6 +26,7 @@ import { useSession } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
 import { StatCard, SectionCard } from "@/components/ui";
 import type { DashboardStats, History, SuspiciousActivity, SuspiciousAlert } from "@/types";
+import type { Dayjs } from "dayjs";
 import {
   LineChart,
   Line,
@@ -36,6 +37,23 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+
+const { RangePicker } = DatePicker;
+
+const routeMap: Record<string, { permission: string }> = {
+  "/dashboard": { permission: "read:dashboard" },
+  "/users": { permission: "read:user" },
+  "/subscriptions": { permission: "read:subscription" },
+  "/plans": { permission: "read:plan" },
+  "/sharing-content": { permission: "read:sharingcontent" },
+  "/folder": { permission: "" },
+  "/qr": { permission: "" },
+  "/history": { permission: "read:history" },
+  "/homepage": { permission: "read:dashboard" },
+  "/payments": { permission: "read:dashboard" },
+  "/upgrade": { permission: "" },
+  "/profile": { permission: "" },
+};
 
 const ACTION_CONFIG: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
   create: { color: "green", icon: <PlusCircleOutlined />, label: "Created" },
@@ -80,10 +98,16 @@ export default function DashboardPage() {
   const [subscriptionStats, setSubscriptionStats] = useState<{ total: number; active: number; expired: number; trial: number } | null>(null);
   const [paymentStats, setPaymentStats] = useState<{ total: number; completed: number; revenue: number } | null>(null);
   const [growthData, setGrowthData] = useState<{ labels: string[]; subscriptionData: number[]; revenueData: number[] } | null>(null);
-  const [subPeriod, setSubPeriod] = useState<string>("all");
-  const [payPeriod, setPayPeriod] = useState<string>("all");
+  const [subDateRange, setSubDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [payDateRange, setPayDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Calculate accessible routes
+  const accessibleRoutes = Object.entries(routeMap).filter(([, item]) => {
+    if (item.permission === "") return true;
+    return user?.permissions?.includes(item.permission);
+  }).length;
 
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -108,30 +132,36 @@ export default function DashboardPage() {
     }
   };
 
-  const loadSubscriptionStats = async (period: string) => {
+  const loadSubscriptionStats = async (dates?: [Dayjs | null, Dayjs | null] | null) => {
     try {
-      const res = await dashboardApi.subscriptionStats(period === "all" ? undefined : period);
+      const range = dates ?? subDateRange;
+      const startDate = range?.[0]?.format("YYYY-MM-DD");
+      const endDate = range?.[1]?.format("YYYY-MM-DD");
+      const res = await dashboardApi.subscriptionStats(startDate, endDate);
       setSubscriptionStats(res.data?.data || null);
     } catch {}
   };
 
-  const loadPaymentStats = async (period: string) => {
+  const loadPaymentStats = async (dates?: [Dayjs | null, Dayjs | null] | null) => {
     try {
-      const res = await dashboardApi.paymentStats(period === "all" ? undefined : period);
+      const range = dates ?? payDateRange;
+      const startDate = range?.[0]?.format("YYYY-MM-DD");
+      const endDate = range?.[1]?.format("YYYY-MM-DD");
+      const res = await dashboardApi.paymentStats(startDate, endDate);
       setPaymentStats(res.data?.data || null);
     } catch {}
   };
 
   useEffect(() => { load(); }, []);
 
-  const handleSubPeriodChange = (value: string) => {
-    setSubPeriod(value);
-    loadSubscriptionStats(value);
+  const handleSubDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+    setSubDateRange(dates);
+    loadSubscriptionStats(dates);
   };
 
-  const handlePayPeriodChange = (value: string) => {
-    setPayPeriod(value);
-    loadPaymentStats(value);
+  const handlePayDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+    setPayDateRange(dates);
+    loadPaymentStats(dates);
   };
 
   const chartData = growthData?.labels.map((label, index) => ({
@@ -165,19 +195,13 @@ export default function DashboardPage() {
               </div>
             }
             extra={
-              <Radio.Group
+              <RangePicker
                 size="small"
-                value={subPeriod}
-                onChange={(e) => handleSubPeriodChange(e.target.value)}
-                optionType="button"
-                buttonStyle="solid"
-              >
-                <Radio.Button value="all">All</Radio.Button>
-                <Radio.Button value="day">Today</Radio.Button>
-                <Radio.Button value="week">Week</Radio.Button>
-                <Radio.Button value="month">Month</Radio.Button>
-                <Radio.Button value="year">Year</Radio.Button>
-              </Radio.Group>
+                value={subDateRange}
+                onChange={handleSubDateRangeChange}
+                placeholder={["Start", "End"]}
+                style={{ width: 240 }}
+              />
             }
           >
             {subscriptionStats ? (
@@ -229,19 +253,13 @@ export default function DashboardPage() {
               </div>
             }
             extra={
-              <Radio.Group
+              <RangePicker
                 size="small"
-                value={payPeriod}
-                onChange={(e) => handlePayPeriodChange(e.target.value)}
-                optionType="button"
-                buttonStyle="solid"
-              >
-                <Radio.Button value="all">All</Radio.Button>
-                <Radio.Button value="day">Today</Radio.Button>
-                <Radio.Button value="week">Week</Radio.Button>
-                <Radio.Button value="month">Month</Radio.Button>
-                <Radio.Button value="year">Year</Radio.Button>
-              </Radio.Group>
+                value={payDateRange}
+                onChange={handlePayDateRangeChange}
+                placeholder={["Start", "End"]}
+                style={{ width: 240 }}
+              />
             }
           >
             {paymentStats ? (
@@ -485,6 +503,14 @@ export default function DashboardPage() {
             )}
           </SectionCard>
           <SectionCard title="Your Permissions">
+            <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+              <Tag color="blue" style={{ fontSize: 13, padding: "4px 12px" }}>
+                {user?.permissions?.length || 0} permissions
+              </Tag>
+              <Tag color="green" style={{ fontSize: 13, padding: "4px 12px" }}>
+                {accessibleRoutes} routes
+              </Tag>
+            </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {user?.permissions?.map((p: string) => (
                 <Tag

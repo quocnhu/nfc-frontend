@@ -112,17 +112,14 @@ export default function DashboardPage() {
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-    const results = await Promise.allSettled([
-      dashboardApi.stats(),
-      dashboardApi.activity(20),
-      dashboardApi.suspicious(),
-      dashboardApi.subscriptionStats(),
-      dashboardApi.paymentStats(),
-      dashboardApi.growth(),
+    const [statsRes, activityRes, suspiciousRes, subRes, payRes, growthRes] = await Promise.all([
+      dashboardApi.stats().catch(() => null),
+      dashboardApi.activity(20).catch(() => null),
+      dashboardApi.suspicious().catch(() => null),
+      dashboardApi.subscriptionStats().catch(() => null),
+      dashboardApi.paymentStats().catch(() => null),
+      dashboardApi.growth().catch(() => null),
     ]);
-    const [statsRes, activityRes, suspiciousRes, subRes, payRes, growthRes] = results.map((r) =>
-      r.status === "fulfilled" ? r.value : null,
-    );
     setStats(statsRes?.data?.data || null);
     setActivity(activityRes?.data?.data || []);
     setSuspicious(suspiciousRes?.data?.data || null);

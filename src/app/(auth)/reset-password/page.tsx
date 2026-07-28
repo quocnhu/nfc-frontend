@@ -34,7 +34,12 @@ function ResetPasswordForm() {
           Reset Password
         </Typography.Title>
         <Form layout="vertical" onFinish={onFinish}>
-          <Form.Item name="newPassword" label="New Password" rules={[{ required: true, min: 6 }]}>
+          <Form.Item name="newPassword" label="New Password" rules={[
+            { required: true, message: 'Please enter a password' },
+            { min: 8, message: 'Password must be at least 8 characters' },
+            { max: 128, message: 'Password must not exceed 128 characters' },
+            { pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+\-=])[A-Za-z\d@$!%*?&#^()_+\-=]{8,}$/, message: 'Password must contain uppercase, lowercase, number, and special character' },
+          ]}>
             <Input.Password />
           </Form.Item>
           <Form.Item

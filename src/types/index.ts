@@ -151,6 +151,7 @@ export interface Plan {
   name: string;
   displayName: string;
   description?: string;
+  features?: string[];
   price: number;
   currency: string;
   durationDays: number;

@@ -3,36 +3,44 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Typography, Button, Spin, Space, Tag, Divider, Row, Col, message, Empty } from "antd";
-import { CrownOutlined, CheckCircleOutlined, ClockCircleOutlined, ThunderboltOutlined, RocketOutlined, LockOutlined, StopOutlined } from "@ant-design/icons";
+import { CrownOutlined, CheckCircleOutlined, ClockCircleOutlined, LockOutlined, StopOutlined } from "@ant-design/icons";
 import { paymentApi } from "@/lib/api";
 import { useSession } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
 import type { Plan, PaymentStatus } from "@/types";
 
-const PLAN_ICONS: Record<string, React.ReactNode> = {
-  FREE: <ClockCircleOutlined />,
-  PRO: <ThunderboltOutlined />,
-  PROPLUS: <RocketOutlined />,
-};
-
-const PLAN_COLORS: Record<string, string> = {
-  FREE: "#6e6e73",
-  PRO: "#4f46e5",
-  PROPLUS: "#faad14",
-};
-
-const PLAN_LEVEL: Record<string, number> = {
-  FREE: 0,
-  PRO: 1,
-  PROPLUS: 2,
-};
-
 function formatDuration(days: number): string {
-  if (days === 0) return "30 minutes";
-  if (days <= 1) return "30 minutes";
-  if (days <= 30) return "1 month";
-  if (days <= 365) return "1 year";
-  return `${days} days`;
+  if (days < 1/24) {
+    // Less than 1 hour, show in minutes
+    const minutes = Math.round(days * 24 * 60);
+    return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+  } else if (days < 1) {
+    // Less than 1 day, show in hours
+    const hours = Math.round(days * 24);
+    return hours === 1 ? "1 hour" : `${hours} hours`;
+  } else if (days === 1) {
+    return "1 day";
+  } else if (days === 30) {
+    return "1 month";
+  } else if (days === 365) {
+    return "1 year";
+  } else {
+    return `${days} days`;
+  }
+}
+
+function getPlanColor(index: number): string {
+  const colors = [
+    "#4f46e5", // indigo
+    "#faad14", // gold
+    "#52c41a", // green
+    "#722ed1", // purple
+    "#13c2c2", // cyan
+    "#eb2f96", // magenta
+    "#fa8c16", // orange
+    "#2f54eb", // blue
+  ];
+  return colors[index % colors.length];
 }
 
 export default function UpgradePage() {
@@ -63,7 +71,8 @@ export default function UpgradePage() {
           }
 
           if (statusRes.status === "fulfilled") {
-            setPaymentStatus(statusRes.value.data?.data || null);
+            const statusData = statusRes.value.data?.data || null;
+            setPaymentStatus(statusData);
           }
         } catch (err) {
           console.error("Failed to fetch data:", err);
@@ -107,7 +116,7 @@ export default function UpgradePage() {
   }
 
   const currentPlan = paymentStatus?.currentSubscription?.plan;
-  const currentPlanLevel = currentPlan ? (PLAN_LEVEL[currentPlan.name] ?? 0) : -1;
+  const currentPlanPrice = currentPlan?.price ?? -1;
   const isActive = paymentStatus?.isActive || false;
 
   return (
@@ -143,7 +152,7 @@ export default function UpgradePage() {
               <StopOutlined style={{ color: "#ff4d4f", fontSize: 18 }} />
             )}
             <Typography.Text>
-              Current plan: <Tag color={PLAN_COLORS[currentPlan.name] || "#4f46e5"}>{currentPlan.displayName}</Tag>
+              Current plan: <Tag color={getPlanColor(plans.findIndex(p => p.id === currentPlan.id))}>{currentPlan.displayName}</Tag>
               {isActive ? (
                 paymentStatus?.expiresAt && (
                   <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
@@ -183,13 +192,12 @@ export default function UpgradePage() {
         <Empty description="No plans available" />
       ) : (
         <Row gutter={[20, 20]}>
-          {plans.map((plan) => {
-            const planLevel = PLAN_LEVEL[plan.name] ?? 0;
+          {plans.map((plan, index) => {
             const isCurrentPlan = currentPlan?.id === plan.id;
-            const isLowerOrSame = planLevel <= currentPlanLevel;
+            const isLowerOrSame = plan.price <= currentPlanPrice;
             const isBlocked = isLowerOrSame && !isCurrentPlan;
             const isFree = plan.price === 0;
-            const color = PLAN_COLORS[plan.name] || "#4f46e5";
+            const color = getPlanColor(index);
 
             let buttonText: string;
             let buttonDisabled: boolean;
@@ -274,7 +282,7 @@ export default function UpgradePage() {
                       color,
                       margin: "0 auto 12px",
                     }}>
-                      {PLAN_ICONS[plan.name] || <CrownOutlined />}
+                      <CrownOutlined />
                     </div>
                     <Typography.Title level={4} style={{ margin: 0 }}>
                       {plan.displayName}
@@ -295,33 +303,17 @@ export default function UpgradePage() {
 
                   <div style={{ flex: 1, marginBottom: 20 }}>
                     <Space direction="vertical" style={{ width: "100%" }} size={8}>
-                      {!isFree && (
-                        <>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {plan.features && plan.features.length > 0 ? (
+                        plan.features.map((feature, idx) => (
+                          <div key={idx} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                            <Typography.Text style={{ fontSize: 13 }}>Full NFC access</Typography.Text>
+                            <Typography.Text style={{ fontSize: 13 }}>{feature}</Typography.Text>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                            <Typography.Text style={{ fontSize: 13 }}>Custom sharing links</Typography.Text>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                            <Typography.Text style={{ fontSize: 13 }}>Priority support</Typography.Text>
-                          </div>
-                        </>
-                      )}
-                      {isFree && (
-                        <>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                            <Typography.Text style={{ fontSize: 13 }}>30 minutes NFC access</Typography.Text>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                            <Typography.Text style={{ fontSize: 13 }}>Basic sharing links</Typography.Text>
-                          </div>
-                        </>
+                        ))
+                      ) : (
+                        <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                          No features listed
+                        </Typography.Text>
                       )}
                     </Space>
                   </div>

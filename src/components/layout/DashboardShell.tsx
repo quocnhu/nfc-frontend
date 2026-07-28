@@ -123,13 +123,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const permissions = (user as any)?.permissions as string[] | undefined;
   const userRole = (user as any)?.role as string | undefined;
   const isAdmin = userRole === "ADMIN";
+  const isCompany = userRole === "COMPANY";
+  const hideUpgrade = isAdmin || isCompany;
 
   const menuItems = useMemo(() => {
     if (!permissions) return [];
     return Object.entries(routeMap)
       .filter(
-        ([, item]) => {
-          if (item.hideForAdmin && isAdmin) return false;
+        ([key, item]) => {
+          if (item.hideForAdmin && hideUpgrade) return false;
           return item.permission === "" || permissions.includes(item.permission);
         }
       )
@@ -138,7 +140,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         icon: item.icon,
         label: item.label,
       }));
-  }, [permissions, isAdmin]);
+  }, [permissions, hideUpgrade]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -181,7 +183,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               fontWeight: 700,
             }}
           >
-            {collapsed ? "QN" : "Quoc Nhu NFC"}
+            {collapsed ? "QN" : "QuocNhu"}
           </Typography.Title>
         </div>
         <Menu
@@ -281,7 +283,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </Space>
 
           <Space size={12}>
-            {paymentStatus && !paymentStatus.isActive && !isAdmin && (
+            {paymentStatus && !paymentStatus.isActive && !isAdmin && paymentStatus.currentSubscription?.plan && paymentStatus.currentSubscription.plan.name !== "FREE" && (
               <Badge dot>
                 <Button
                   type="text"

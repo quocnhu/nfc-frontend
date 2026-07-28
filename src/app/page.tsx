@@ -10,7 +10,6 @@ import {
   DeploymentUnitOutlined,
   ApiOutlined,
   DesktopOutlined,
-  GlobalOutlined,
   CameraOutlined,
   EnvironmentOutlined,
   CustomerServiceOutlined,
@@ -40,7 +39,6 @@ const DEFAULT_TOUR_GUIDE_IMG = "https://images.unsplash.com/photo-1488646953014-
 const TOUR_GUIDE_DATA = [
   { icon: <CustomerServiceOutlined />, title: "Tour Guide", desc: "Leading guests through cultural landmarks, historical sites, and natural wonders with engaging storytelling." },
   { icon: <DesktopOutlined />, title: "Tour Operator", desc: "Planning itineraries, coordinating logistics, and ensuring seamless travel experiences for groups of all sizes." },
-  { icon: <GlobalOutlined />, title: "Destination Expert", desc: "In-depth knowledge of local customs, cuisine, hidden gems, and off-the-beaten-path adventures." },
 ];
 
 function useInView(threshold = 0.15) {
@@ -495,7 +493,7 @@ export default function HomePage() {
               }}
             />
           </div>
-          <Title level={1} style={{ color: "#fff", margin: 0, fontSize: "clamp(28px, 8vw, 48px)", fontWeight: 800, letterSpacing: -1 }}>
+          <Title level={1} style={{ color: "#fff", margin: 0, fontSize: "clamp(28px, 8vw, 48px)", fontWeight: 800, letterSpacing: -1, textShadow: "0 2px 8px rgba(102,126,234,0.5), 0 4px 16px rgba(118,75,162,0.3)" }}>
             Quoc Nhu
           </Title>
           <Paragraph style={{ fontSize: "clamp(16px, 4vw, 20px)", color: "#aaa", marginTop: 8, marginBottom: 0 }}>
@@ -583,44 +581,55 @@ export default function HomePage() {
                   </div>
                   <Text strong style={{ color: "#f0f0f0", fontSize: 16 }}>Networking &amp; Cloud</Text>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {[
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {([
                     { label: "CCNA", color: "#00d4ff" },
                     { label: "MCSA", color: "#00a4ef" },
                     { label: "Linux", color: "#f5c842" },
+                    { label: "VMware", color: "#69656a", children: [
+                      { label: "VMware ESXi", color: "#69656a" },
+                      { label: "Proxmox", color: "#e57000" },
+                    ]},
                     { label: "Cloud AWS", color: "#ff9900" },
                     { label: "Cloud Google", color: "#34d399" },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 14,
-                        padding: "12px 16px",
-                        borderRadius: 12,
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.05)",
-                        transition: "background 0.3s, border-color 0.3s",
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = `${item.color}0a`; e.currentTarget.style.borderColor = `${item.color}33`; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}
-                    >
+                    { label: "Bash Scripting", color: "#4eaa25" },
+                  ] as Array<{ label: string; color: string; children?: { label: string; color: string }[] }>).map((item) =>
+                    item.children ? (
+                      <div key={`g-${item.label}`} style={{ borderRadius: 12, background: "rgba(255,255,255,0.03)", border: `1px solid ${item.color}22`, overflow: "hidden" }}>
+                        <div
+                          style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", transition: "background 0.3s" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = `${item.color}0a`; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: item.color, flexShrink: 0, boxShadow: `0 0 8px ${item.color}66` }} />
+                          <Text strong style={{ color: "#e0e0e0", fontSize: 14 }}>{item.label}</Text>
+                        </div>
+                        <div style={{ borderTop: `1px solid ${item.color}15` }}>
+                          {item.children.map((child) => (
+                            <div
+                              key={child.label}
+                              style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px 10px 44px", transition: "background 0.3s" }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = `${child.color}0a`; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                            >
+                              <div style={{ width: 6, height: 6, borderRadius: "50%", background: child.color, flexShrink: 0, boxShadow: `0 0 6px ${child.color}66` }} />
+                              <Text style={{ color: "#c0c0c0", fontSize: 13 }}>{child.label}</Text>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
                       <div
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: item.color,
-                          flexShrink: 0,
-                          boxShadow: `0 0 8px ${item.color}66`,
-                        }}
-                      />
-                      <div>
+                        key={item.label}
+                        style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", transition: "background 0.3s, border-color 0.3s" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = `${item.color}0a`; e.currentTarget.style.borderColor = `${item.color}33`; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}
+                      >
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: item.color, flexShrink: 0, boxShadow: `0 0 8px ${item.color}66` }} />
                         <Text strong style={{ color: "#e0e0e0", fontSize: 14 }}>{item.label}</Text>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </Card>
             </Col>

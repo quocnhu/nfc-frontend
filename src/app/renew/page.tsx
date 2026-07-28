@@ -28,11 +28,21 @@ const PLAN_LEVEL: Record<string, number> = {
 };
 
 function formatDuration(days: number): string {
-  if (days === 0) return "30 minutes";
-  if (days <= 1) return "30 minutes";
-  if (days <= 30) return "1 month";
-  if (days <= 365) return "1 year";
-  return `${days} days`;
+  if (days < 1/24) {
+    const minutes = Math.round(days * 24 * 60);
+    return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+  } else if (days < 1) {
+    const hours = Math.round(days * 24);
+    return hours === 1 ? "1 hour" : `${hours} hours`;
+  } else if (days === 1) {
+    return "1 day";
+  } else if (days === 30) {
+    return "1 month";
+  } else if (days === 365) {
+    return "1 year";
+  } else {
+    return `${days} days`;
+  }
 }
 
 export default function RenewPage() {

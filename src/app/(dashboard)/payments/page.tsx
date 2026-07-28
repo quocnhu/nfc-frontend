@@ -66,9 +66,23 @@ export default function PaymentsPage() {
       title: "Duration",
       dataIndex: "durationDays",
       key: "durationDays",
-      render: (days: number) => (
-        <Typography.Text>{days} days</Typography.Text>
-      ),
+      render: (days: number) => {
+        if (days < 1/24) {
+          const minutes = Math.round(days * 24 * 60);
+          return <Typography.Text>{minutes} {minutes === 1 ? 'minute' : 'minutes'}</Typography.Text>;
+        } else if (days < 1) {
+          const hours = Math.round(days * 24);
+          return <Typography.Text>{hours} {hours === 1 ? 'hour' : 'hours'}</Typography.Text>;
+        } else if (days === 1) {
+          return <Typography.Text>1 day</Typography.Text>;
+        } else if (days === 30) {
+          return <Typography.Text>1 month</Typography.Text>;
+        } else if (days === 365) {
+          return <Typography.Text>1 year</Typography.Text>;
+        } else {
+          return <Typography.Text>{days} days</Typography.Text>;
+        }
+      },
     },
     {
       title: "Status",

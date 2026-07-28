@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, InputNumber, Switch, Space, Tag, message, Popconfirm, Tooltip } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, Input, InputNumber, Switch, Space, Tag, message, Popconfirm, Tooltip, Checkbox, Typography, Tabs, Select } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, SettingOutlined, ApiOutlined } from "@ant-design/icons";
 import { paymentApi } from "@/lib/api";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,11 @@ export default function PlansPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
+  // Protected Routes tab state
+  const [routes, setRoutes] = useState<any[]>([]);
+  const [routesLoading, setRoutesLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("plans");
+
   const user = session?.user as any;
   const isAdmin = user?.role === "ADMIN";
 
@@ -29,6 +34,7 @@ export default function PlansPage() {
       return;
     }
     loadPlans();
+    loadRoutes();
   }, [isAdmin, router]);
 
   const loadPlans = async () => {
@@ -43,47 +49,142 @@ export default function PlansPage() {
     }
   };
 
-  const handleCreate = () => {
+  const loadRoutes = async () => {
+    setRoutesLoading(true);
+    try {
+      const res = await paymentApi.getPlanRoutes();
+      const data = res.data?.data;
+      setRoutes(data?.routes || []);
+    } catch (err: any) {
+      messageApi.error("Failed to load routes");
+    } finally {
+      setRoutesLoading(false);
+    }
+  };
+
+  const handleToggleRoutePermission = async (planId: string, permissionId: string, hasPermission: boolean) => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+
+    const currentPermIds = plan.planPermissions?.map((pp: any) => pp.permission.id) || [];
+    let newPermIds: string[];
+    
+    if (hasPermission) {
+      newPermIds = currentPermIds.filter((id: string) => id !== permissionId);
+    } else {
+      newPermIds = [...currentPermIds, permissionId];
+    }
+
+    try {
+      await paymentApi.updatePlan({ 
+        id: planId, 
+        permissionIds: newPermIds 
+      });
+      messageApi.success("Route access updated");
+      loadPlans();
+      loadRoutes();
+    } catch (err: any) {
+      messageApi.error("Failed to update route access");
+    }
+  };
+
+  const handleCreate = async () => {
     setEditingPlan(null);
     form.resetFields();
     form.setFieldsValue({
       currency: "USD",
       isActive: true,
       price: 0,
-      durationDays: 30,
+      durationValue: 30,
+      durationUnit: "minutes",
     });
     setModalOpen(true);
   };
 
-  const handleEdit = (plan: any) => {
+  const handleEdit = async (plan: any) => {
     setEditingPlan(plan);
-    form.setFieldsValue({
-      name: plan.name,
-      displayName: plan.displayName,
-      description: plan.description,
-      price: plan.price,
-      currency: plan.currency,
-      durationDays: plan.durationDays,
-      isActive: plan.isActive,
-    });
     setModalOpen(true);
   };
+
+  // Set form values when modal opens for editing
+  useEffect(() => {
+    if (modalOpen && editingPlan) {
+      // Convert durationDays to appropriate unit
+      let durationValue = editingPlan.durationDays;
+      let durationUnit = 'days';
+      
+      if (editingPlan.durationDays < 1) {
+        // Convert to hours or minutes
+        const hours = editingPlan.durationDays * 24;
+        if (hours < 1) {
+          durationValue = Math.round(editingPlan.durationDays * 24 * 60);
+          durationUnit = 'minutes';
+        } else {
+          durationValue = hours;
+          durationUnit = 'hours';
+        }
+      }
+      
+      // Set form values directly
+      form.setFieldsValue({
+        name: editingPlan.name,
+        displayName: editingPlan.displayName,
+        description: editingPlan.description,
+        features: editingPlan.features || [],
+        price: editingPlan.price,
+        currency: editingPlan.currency,
+        durationValue,
+        durationUnit,
+        isActive: editingPlan.isActive,
+      });
+    } else if (modalOpen && !editingPlan) {
+      // Reset form for create mode
+      form.resetFields();
+      form.setFieldsValue({
+        currency: "USD",
+        isActive: true,
+        price: 0,
+        durationValue: 30,
+        durationUnit: "minutes",
+      });
+    }
+  }, [modalOpen, editingPlan]);
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
 
+      // Convert duration to days
+      let durationDays = values.durationValue;
+      if (values.durationUnit === 'minutes') {
+        durationDays = values.durationValue / (24 * 60);
+      } else if (values.durationUnit === 'hours') {
+        durationDays = values.durationValue / 24;
+      }
+
+      const payload = {
+        name: values.name,
+        displayName: values.displayName,
+        description: values.description,
+        features: values.features || [],
+        price: values.price,
+        currency: values.currency,
+        durationDays,
+        isActive: values.isActive,
+      };
+
       if (editingPlan) {
-        await paymentApi.updatePlan({ id: editingPlan.id, ...values });
+        await paymentApi.updatePlan({ id: editingPlan.id, ...payload });
         messageApi.success("Plan updated");
       } else {
-        await paymentApi.createPlan(values);
+        await paymentApi.createPlan(payload);
         messageApi.success("Plan created");
       }
 
       setModalOpen(false);
       loadPlans();
+      loadRoutes();
     } catch (err: any) {
       if (err?.errorFields) return;
       messageApi.error(err?.response?.data?.message || "Failed to save plan");
@@ -138,6 +239,7 @@ export default function PlansPage() {
       title: "Name",
       key: "name",
       align: 'center' as const,
+      width: 150,
       filters: [...new Set(plans.map((p) => p.displayName))].map((name) => ({ text: name, value: name })),
       onFilter: (value: any, record: any) => record.displayName === value,
       render: (_: any, record: any) => (
@@ -153,11 +255,13 @@ export default function PlansPage() {
       key: "description",
       align: 'center' as const,
       ellipsis: true,
+      width: 200,
     },
     {
       title: "Price",
       key: "price",
       align: 'center' as const,
+      width: 100,
       filters: [
         { text: "FREE", value: 0 },
         { text: "Paid", value: "paid" },
@@ -178,21 +282,41 @@ export default function PlansPage() {
       dataIndex: "durationDays",
       key: "durationDays",
       align: 'center' as const,
-      filters: [...new Set(plans.map((p) => p.durationDays))].map((days) => ({
-        text: days === 0 ? "30 minutes" : days === 30 ? "1 month" : days === 365 ? "1 year" : `${days} days`,
-        value: days,
-      })),
-      onFilter: (value: any, record: any) => record.durationDays === value,
+      width: 120,
       render: (days: number) => {
-        if (days === 0) return <Tag>30 minutes</Tag>;
-        if (days === 30) return <Tag color="blue">1 month</Tag>;
-        if (days === 365) return <Tag color="gold">1 year</Tag>;
-        return <Tag>{days} days</Tag>;
+        if (days < 1/24) {
+          // Less than 1 hour, show in minutes
+          const minutes = Math.round(days * 24 * 60);
+          return <Tag>{minutes} {minutes === 1 ? 'minute' : 'minutes'}</Tag>;
+        } else if (days < 1) {
+          // Less than 1 day, show in hours
+          const hours = Math.round(days * 24);
+          return <Tag color="blue">{hours} {hours === 1 ? 'hour' : 'hours'}</Tag>;
+        } else if (days === 30) {
+          return <Tag color="blue">1 month</Tag>;
+        } else if (days === 365) {
+          return <Tag color="gold">1 year</Tag>;
+        } else {
+          return <Tag>{days} {days === 1 ? 'day' : 'days'}</Tag>;
+        }
+      },
+    },
+    {
+      title: "Protected Routes",
+      key: "permissions",
+      align: 'center' as const,
+      width: 140,
+      render: (_: any, record: any) => {
+        const perms = record.planPermissions?.map((pp: any) => pp.permission.name) || [];
+        return (
+          <Tag color="blue">{perms.length} routes protected</Tag>
+        );
       },
     },
     {
       title: "Status",
       key: "isActive",
+      width: 100,
       filters: [{ text: "Active", value: true }, { text: "Inactive", value: false }],
       onFilter: (value: any, record: any) => record.isActive === value,
       align: 'center' as const,
@@ -208,6 +332,7 @@ export default function PlansPage() {
     {
       title: "Subscriptions",
       key: "subscriptions",
+      width: 120,
       align: 'center' as const,
       sorter: (a: any, b: any) => (a._count?.subscriptions || 0) - (b._count?.subscriptions || 0),
       render: (_: any, record: any) => (
@@ -220,9 +345,10 @@ export default function PlansPage() {
       title: "Actions",
       key: "actions",
       align: 'center' as const,
+      width: 100,
       render: (_: any, record: any) => (
-        <Space>
-          <Tooltip title="Edit">
+        <Space size="small">
+          <Tooltip title="Edit Plan">
             <Button
               size="small"
               icon={<EditOutlined />}
@@ -249,50 +375,156 @@ export default function PlansPage() {
     },
   ];
 
+  // Protected Routes columns
+  const protectedRouteColumns = [
+    {
+      title: "Route",
+      key: "route",
+      width: 280,
+      render: (_: any, record: any) => (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+            <Tag color={
+              record.method === 'GET' ? 'green' :
+              record.method === 'POST' ? 'blue' :
+              record.method === 'PUT' ? 'orange' :
+              record.method === 'DELETE' ? 'red' : 'default'
+            }>
+              {record.method}
+            </Tag>
+            <Typography.Text code style={{ fontSize: '11px', wordBreak: 'break-all' }}>
+              {record.path}
+            </Typography.Text>
+          </div>
+          <Tag color="purple" style={{ fontSize: '11px' }}>
+            {record.permission}
+          </Tag>
+        </div>
+      ),
+    },
+    ...plans.map(plan => ({
+      title: plan.displayName,
+      key: `plan-${plan.id}`,
+      align: 'center' as const,
+      width: 100,
+      render: (_: any, record: any) => {
+        const planData = record.plans?.find((p: any) => p.id === plan.id);
+        const hasPermission = planData?.hasPermission || false;
+        return (
+          <Checkbox
+            checked={hasPermission}
+            onChange={() => handleToggleRoutePermission(plan.id, record.permissionId, hasPermission)}
+          />
+        );
+      },
+    })),
+  ];
+
   return (
     <div>
       {contextHolder}
       
-      <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          Create Plan
-        </Button>
-        {selectedRowKeys.length > 0 && (
-          <Popconfirm
-            title={`Delete ${selectedRowKeys.length} selected plan(s)?`}
-            onConfirm={handleBulkDelete}
-            okText="Delete"
-            okType="danger"
-          >
-            <Button danger icon={<DeleteOutlined />}>
-              Delete Selected ({selectedRowKeys.length})
-            </Button>
-          </Popconfirm>
-        )}
-      </Space>
-
-      <Table
-        columns={columns}
-        dataSource={plans}
-        rowKey="id"
-        loading={loading}
-        pagination={false}
-        rowSelection={{
-          selectedRowKeys,
-          onChange: (keys) => setSelectedRowKeys(keys),
-          getCheckboxProps: (record: any) => ({
-            disabled: record._count?.subscriptions > 0,
-          }),
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => {
+          setActiveTab(key);
+          if (key === "protected-routes" && routes.length === 0) {
+            loadRoutes();
+          }
         }}
+        items={[
+          {
+            key: "plans",
+            label: "Plans",
+            children: (
+              <>
+                <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                    Create Plan
+                  </Button>
+                  {selectedRowKeys.length > 0 && (
+                    <Popconfirm
+                      title={`Delete ${selectedRowKeys.length} selected plan(s)?`}
+                      onConfirm={handleBulkDelete}
+                      okText="Delete"
+                      okType="danger"
+                    >
+                      <Button danger icon={<DeleteOutlined />}>
+                        Delete Selected ({selectedRowKeys.length})
+                      </Button>
+                    </Popconfirm>
+                  )}
+                </div>
+
+                <Table
+                  columns={columns}
+                  dataSource={plans}
+                  rowKey="id"
+                  loading={loading}
+                  scroll={{ x: 'max-content' }}
+                  pagination={{
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    pageSizeOptions: ['10', '20', '50'],
+                    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} plans`,
+                  }}
+                  rowSelection={{
+                    selectedRowKeys,
+                    onChange: (keys) => setSelectedRowKeys(keys),
+                    getCheckboxProps: (record: any) => ({
+                      disabled: record._count?.subscriptions > 0,
+                    }),
+                  }}
+                />
+              </>
+            ),
+          },
+          {
+            key: "protected-routes",
+            label: (
+              <span>
+                <ApiOutlined /> Protected Routes
+              </span>
+            ),
+            children: (
+              <>
+                <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
+                  Manage which routes are protected by each plan. Check the box to grant access to a plan.
+                </Typography.Paragraph>
+                <Typography.Paragraph type="warning" style={{ marginBottom: 16, fontSize: 12 }}>
+                  <strong>Tip:</strong> Routes marked with <Tag color="green" style={{ margin: '0 2px' }}>GET</Tag> are read operations. 
+                  Routes with <Tag color="blue" style={{ margin: '0 2px' }}>POST</Tag>, <Tag color="orange" style={{ margin: '0 2px' }}>PUT</Tag>, or <Tag color="red" style={{ margin: '0 2px' }}>DELETE</Tag> are write operations that require higher permissions.
+                </Typography.Paragraph>
+                <Table
+                  columns={protectedRouteColumns}
+                  dataSource={routes}
+                  rowKey={(record) => `${record.permission}-${record.path}`}
+                  loading={routesLoading}
+                  pagination={{
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    pageSizeOptions: ['10', '20', '50'],
+                    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} routes`,
+                  }}
+                  scroll={{ x: 'max-content' }}
+                  size="small"
+                />
+              </>
+            ),
+          },
+        ]}
       />
 
+      {/* Create/Edit Plan Modal */}
       <Modal
         title={editingPlan ? "Edit Plan" : "Create Plan"}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
         confirmLoading={submitting}
-        width={600}
+        width={700}
+        style={{ maxWidth: '95vw' }}
+        bodyStyle={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -300,7 +532,13 @@ export default function PlansPage() {
             label="Plan Name (Internal)"
             rules={[{ required: true, message: "Please enter plan name" }]}
           >
-            <Input placeholder="e.g., FREE, PRO, PROPLUS" />
+            <Input 
+              placeholder="e.g., FREE, PRO, PROPLUS" 
+              onChange={(e) => {
+                const value = e.target.value.toUpperCase();
+                form.setFieldsValue({ name: value });
+              }}
+            />
           </Form.Item>
 
           <Form.Item
@@ -319,6 +557,19 @@ export default function PlansPage() {
           </Form.Item>
 
           <Form.Item
+            name="features"
+            label="Features"
+            extra="Add features that will be displayed on the upgrade page"
+          >
+            <Select
+              mode="tags"
+              style={{ width: '100%' }}
+              placeholder="Type a feature and press Enter"
+              tokenSeparators={[',']}
+            />
+          </Form.Item>
+
+          <Form.Item
             name="price"
             label="Price (USD)"
             rules={[{ required: true, message: "Please enter price" }]}
@@ -333,12 +584,29 @@ export default function PlansPage() {
           </Form.Item>
 
           <Form.Item
-            name="durationDays"
-            label="Duration (days)"
-            rules={[{ required: true, message: "Please enter duration" }]}
-            extra="Use 0 for 30 minutes trial"
+            label="Duration"
+            required
           >
-            <InputNumber min={0} style={{ width: "100%" }} placeholder="30" />
+            <Input.Group compact>
+              <Form.Item
+                name="durationValue"
+                noStyle
+                rules={[{ required: true, message: "Please enter duration" }]}
+              >
+                <InputNumber min={0} style={{ width: '70%' }} placeholder="30" />
+              </Form.Item>
+              <Form.Item
+                name="durationUnit"
+                noStyle
+                initialValue="minutes"
+              >
+                <Select style={{ width: '30%' }}>
+                  <Select.Option value="minutes">Minutes</Select.Option>
+                  <Select.Option value="hours">Hours</Select.Option>
+                  <Select.Option value="days">Days</Select.Option>
+                </Select>
+              </Form.Item>
+            </Input.Group>
           </Form.Item>
 
           <Form.Item

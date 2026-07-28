@@ -8,7 +8,7 @@ import {
 } from "antd";
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined,
-  SafetyOutlined, UserOutlined, TeamOutlined,
+  SafetyOutlined, UserOutlined,
   CameraOutlined, CheckCircleOutlined, CloseCircleOutlined, PictureOutlined, ScissorOutlined,
   RotateLeftOutlined, RotateRightOutlined, UnlockOutlined, StopOutlined, ClockCircleOutlined,
   CrownOutlined,
@@ -44,11 +44,6 @@ export default function UsersPage() {
   const [permTargetUser, setPermTargetUser] = useState<User | null>(null);
   const [rolePermNames, setRolePermNames] = useState<string[]>([]);
   const [directPermIds, setDirectPermIds] = useState<string[]>([]);
-
-  // Role assign modal
-  const [roleAssignModalOpen, setRoleAssignModalOpen] = useState(false);
-  const [assignTargetRole, setAssignTargetRole] = useState<Role | null>(null);
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
   // Avatar upload modal
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -390,43 +385,6 @@ export default function UsersPage() {
     );
   };
 
-  // ─── Role Assign Users ───
-
-  const handleOpenRoleAssign = (role: Role) => {
-    setAssignTargetRole(role);
-    const roleUserIds = users.filter((u) => u.roleId === role.id).map((u) => u.id);
-    setSelectedUserIds(roleUserIds);
-    setRoleAssignModalOpen(true);
-  };
-
-  const handleRoleAssignSubmit = async () => {
-    if (!assignTargetRole) return;
-    try {
-      setModalLoading(true);
-      const currentIds = users.filter((u) => u.roleId === assignTargetRole.id).map((u) => u.id);
-      const toAdd = selectedUserIds.filter((id) => !currentIds.includes(id));
-      const toRemove = currentIds.filter((id) => !selectedUserIds.includes(id));
-      const defaultRole = roles.find((r) => r.name === "USER");
-      await Promise.all([
-        ...toAdd.map((id) => userApi.update({ id, roleId: assignTargetRole.id })),
-        ...toRemove.map((id) => userApi.update({ id, roleId: defaultRole?.id || "" })),
-      ]);
-      messageApi.success(`Users updated for ${assignTargetRole.name}`);
-      setRoleAssignModalOpen(false);
-      load();
-    } catch (err: any) {
-      messageApi.error(getErrorMessage(err));
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const toggleUserInRole = (userId: string) => {
-    setSelectedUserIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
-  };
-
   // ─── Avatar Upload (with crop) ───
 
   const handleOpenAvatarUpload = async (user: User) => {
@@ -646,41 +604,47 @@ export default function UsersPage() {
       render: (_: any, record: User) => {
         if (hasReadAll) {
           const isLocked = record.lockedUntil && new Date(record.lockedUntil) > new Date();
+          const isAdmin = record.role?.name === "ADMIN";
+          
+          if (isAdmin) {
+            return (
+              <Space size="small">
+                <Button size="small" icon={<CameraOutlined />} onClick={() => handleOpenAvatarUpload(record)} title="Upload Avatar" />
+                <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} title="Edit" />
+                <Button size="small" icon={<SafetyOutlined />} onClick={() => handleOpenPerms(record)} title="Individual Permissions" />
+              </Space>
+            );
+          }
+          
           return (
             <Space size="small">
               <Button size="small" icon={<CameraOutlined />} onClick={() => handleOpenAvatarUpload(record)} title="Upload Avatar" />
               <Button size="small" icon={<EditOutlined />} onClick={() => handleEditUser(record)} title="Edit" />
               <Button size="small" icon={<CrownOutlined />} onClick={() => handleOpenPlanModal(record)} title="Change Plan" />
               <Button size="small" icon={<SafetyOutlined />} onClick={() => handleOpenPerms(record)} title="Individual Permissions" />
-              {record.role?.name !== "ADMIN" && (
-                <>
-                  {record.status === "INACTIVE" ? (
-                    record.isEmailVerified ? (
-                      <Popconfirm title="Activate this user?" onConfirm={() => handleToggleStatus(record)}>
-                        <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#52c41a", borderColor: "#52c41a" }} title="Activate" />
-                      </Popconfirm>
-                    ) : (
-                      <Tooltip title="Email not verified">
-                        <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#d9d9d9", borderColor: "#d9d9d9" }} disabled title="Email not verified" />
-                      </Tooltip>
-                    )
-                  ) : (
-                    <Popconfirm title="Disable this user?" onConfirm={() => handleToggleStatus(record)}>
-                      <Button size="small" icon={<StopOutlined />} style={{ color: "#ff4d4f", borderColor: "#ff4d4f" }} title="Disable" />
-                    </Popconfirm>
-                  )}
-                </>
+              {record.status === "INACTIVE" ? (
+                record.isEmailVerified ? (
+                  <Popconfirm title="Activate this user?" onConfirm={() => handleToggleStatus(record)}>
+                    <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#52c41a", borderColor: "#52c41a" }} title="Activate" />
+                  </Popconfirm>
+                ) : (
+                  <Tooltip title="Email not verified">
+                    <Button size="small" icon={<CheckCircleOutlined />} style={{ color: "#d9d9d9", borderColor: "#d9d9d9" }} disabled title="Email not verified" />
+                  </Tooltip>
+                )
+              ) : (
+                <Popconfirm title="Disable this user?" onConfirm={() => handleToggleStatus(record)}>
+                  <Button size="small" icon={<StopOutlined />} style={{ color: "#ff4d4f", borderColor: "#ff4d4f" }} title="Disable" />
+                </Popconfirm>
               )}
               {isLocked && (
                 <Popconfirm title="Unlock this account?" onConfirm={() => handleUnlockUser(record)}>
                   <Button size="small" icon={<UnlockOutlined />} title="Unlock" />
                 </Popconfirm>
               )}
-              {record.role?.name !== "ADMIN" && (
-                <Popconfirm title="Delete user?" onConfirm={() => handleDeleteUser(record)}>
-                  <Button size="small" danger icon={<DeleteOutlined />} title="Delete" />
-                </Popconfirm>
-              )}
+              <Popconfirm title="Delete user?" onConfirm={() => handleDeleteUser(record)}>
+                <Button size="small" danger icon={<DeleteOutlined />} title="Delete" />
+              </Popconfirm>
             </Space>
           );
         }
@@ -722,7 +686,6 @@ export default function UsersPage() {
           {record.name !== "ADMIN" ? (
             <>
               <Button size="small" icon={<EditOutlined />} onClick={() => handleEditRole(record)} title="Edit Role" />
-              <Button size="small" icon={<TeamOutlined />} onClick={() => handleOpenRoleAssign(record)} title="Assign Users" />
               <Popconfirm title="Delete role?" onConfirm={() => handleDeleteRole(record.id, record.name)}>
                 <Button size="small" danger icon={<DeleteOutlined />} />
               </Popconfirm>
@@ -881,7 +844,12 @@ export default function UsersPage() {
               <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
                 <Input />
               </Form.Item>
-              <Form.Item name="password" label="Password" rules={[{ required: true, min: 6 }]}>
+              <Form.Item name="password" label="Password" rules={[
+                { required: true, message: 'Please enter a password' },
+                { min: 8, message: 'Password must be at least 8 characters' },
+                { max: 128, message: 'Password must not exceed 128 characters' },
+                { pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+\-=])[A-Za-z\d@$!%*?&#^()_+\-=]{8,}$/, message: 'Password must contain uppercase, lowercase, number, and special character' },
+              ]}>
                 <Input.Password />
               </Form.Item>
             </>
@@ -889,7 +857,11 @@ export default function UsersPage() {
           {editingUser && (
             <>
               <Divider style={{ margin: "12px 0" }}>Change Password (optional)</Divider>
-              <Form.Item name="newPassword" label="New Password" rules={[{ min: 6, message: "Password must be at least 6 characters" }]}>
+              <Form.Item name="newPassword" label="New Password" rules={[
+                { min: 8, message: 'Password must be at least 8 characters' },
+                { max: 128, message: 'Password must not exceed 128 characters' },
+                { pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+\-=])[A-Za-z\d@$!%*?&#^()_+\-=]{8,}$/, message: 'Password must contain uppercase, lowercase, number, and special character' },
+              ]}>
                 <Input.Password prefix={<LockOutlined />} placeholder="Leave empty to keep current" />
               </Form.Item>
               <Form.Item
@@ -1005,66 +977,6 @@ export default function UsersPage() {
             </div>
           </div>
         ))}
-      </Modal>
-
-      {/* ─── Role Assign Users Modal ─── */}
-      <Modal
-        title={`Assign Users — ${assignTargetRole?.name || ""}`}
-        open={roleAssignModalOpen}
-        onOk={handleRoleAssignSubmit}
-        confirmLoading={modalLoading}
-        onCancel={() => setRoleAssignModalOpen(false)}
-        width={520}
-        style={{ maxWidth: '90vw' }}
-      >
-        <Typography.Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
-          Select users to assign to this role. Users currently assigned to other roles will be moved.
-        </Typography.Text>
-        {assignTargetRole?.name === "ADMIN" ? (
-          <Typography.Text type="warning">ADMIN role cannot have users manually assigned.</Typography.Text>
-        ) : (
-          <div style={{ maxHeight: 360, overflowY: "auto", border: "1px solid #f0f0f0", borderRadius: 8, padding: 8 }}>
-            {users.length === 0 ? (
-              <Typography.Text type="secondary">No users found</Typography.Text>
-            ) : (
-              users.filter((u) => u.role?.name !== "ADMIN").map((u) => {
-                const checked = selectedUserIds.includes(u.id);
-                const assignedElsewhere = u.roleId && u.roleId !== assignTargetRole?.id && u.role?.name !== "ADMIN";
-                return (
-                  <div
-                    key={u.id}
-                    onClick={() => toggleUserInRole(u.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "8px 10px",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      background: checked ? "rgba(79, 70, 229, 0.06)" : "transparent",
-                      transition: "background 0.15s",
-                    }}
-                  >
-                    <Checkbox checked={checked} />
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {u.fullname}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#6e6e73", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {u.email}
-                      </div>
-                    </div>
-                    {assignedElsewhere && (
-                      <Tag color="orange" style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>
-                        Currently: {u.role?.name}
-                      </Tag>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
       </Modal>
 
       {/* ─── Avatar Upload Modal (picker + history) ─── */}
@@ -1250,7 +1162,24 @@ export default function UsersPage() {
                       ${plan.price.toFixed(2)}
                     </Typography.Title>
                     <Typography.Text style={{ fontSize: 11, color: "#6e6e73" }}>
-                      {plan.durationDays === 0 ? "30 min" : plan.durationDays <= 30 ? `${plan.durationDays} days` : `${plan.durationDays / 365} year(s)`}
+                      {(() => {
+                        const days = plan.durationDays;
+                        if (days < 1/24) {
+                          const minutes = Math.round(days * 24 * 60);
+                          return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+                        } else if (days < 1) {
+                          const hours = Math.round(days * 24);
+                          return hours === 1 ? "1 hour" : `${hours} hours`;
+                        } else if (days === 1) {
+                          return "1 day";
+                        } else if (days === 30) {
+                          return "1 month";
+                        } else if (days === 365) {
+                          return "1 year";
+                        } else {
+                          return `${days} days`;
+                        }
+                      })()}
                     </Typography.Text>
                   </div>
                 </Space>

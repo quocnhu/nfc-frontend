@@ -6,7 +6,7 @@ import { AvatarProvider } from "@/components/providers/AvatarProvider";
 import { PayPalProvider } from "@/components/providers/PayPalProvider";
 
 export const metadata: Metadata = {
-  title: "Quoc Nhu NFC Tap",
+  title: "QuocNhu's Website",
   description: "NFC sharing platform",
 };
 

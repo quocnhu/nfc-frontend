@@ -1,5 +1,5 @@
 import axios from "axios";
-import { message } from "antd";
+import { notification } from "antd";
 
 const api = axios.create({
   baseURL: "/backend-api",
@@ -33,6 +33,24 @@ function isOnAuthPage() {
   return AUTH_ROUTES.some((route) => window.location.pathname.startsWith(route));
 }
 
+let hasShownSessionExpired = false;
+
+function showSessionExpired() {
+  if (hasShownSessionExpired) return;
+  hasShownSessionExpired = true;
+  
+  notification.error({
+    message: "Session Expired",
+    description: "Your session has expired. Please login again to continue.",
+    duration: 5,
+    placement: "topRight",
+  });
+  
+  setTimeout(() => {
+    hasShownSessionExpired = false;
+  }, 6000);
+}
+
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
@@ -40,7 +58,11 @@ api.interceptors.response.use(
 
     if (err.response?.status === 429) {
       const retryAfter = err.response.headers["retry-after"] || err.response.data?.retryAfter || 30;
-      message.error(`Too many requests. Please wait ${retryAfter} seconds.`);
+      notification.error({
+        message: "Too Many Requests",
+        description: `Please wait ${retryAfter} seconds before trying again.`,
+        duration: 4,
+      });
       return Promise.reject(err);
     }
 
@@ -65,8 +87,9 @@ api.interceptors.response.use(
         await axios.post(REFRESH_URL, null, { withCredentials: true });
         processQueue(null);
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         processQueue(refreshError);
+        showSessionExpired();
         if (typeof window !== "undefined" && !isOnAuthPage()) {
           window.location.href = "/login";
         }
@@ -81,6 +104,12 @@ api.interceptors.response.use(
         `[API Error] ${err.config.method?.toUpperCase()} ${err.config.url} → ${err.response.status}:`,
         err.response.data
       );
+    } else if (err.code === "ECONNABORTED" || err.message?.includes("timeout")) {
+      notification.error({
+        message: "Network Timeout",
+        description: "The request took too long. Please check your connection and try again.",
+        duration: 4,
+      });
     } else {
       console.error("[API Error] Network error:", err.message);
     }

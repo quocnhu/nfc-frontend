@@ -273,9 +273,11 @@ export const paymentApi = {
   // Plan management
   getAllPlans: () =>
     api.get<ApiResponse<any[]>>('/plans'),
-  createPlan: (data: { name: string; displayName: string; description?: string; price: number; currency?: string; durationDays: number; isActive?: boolean }) =>
+  getPlanRoutes: () =>
+    api.get<ApiResponse<{ routes: any[]; plans: any[] }>>('/plans/routes'),
+  createPlan: (data: { name: string; displayName: string; description?: string; features?: string[]; price: number; currency?: string; durationDays: number; isActive?: boolean; permissionIds?: string[] }) =>
     api.post<ApiResponse<Plan>>('/plans', data),
-  updatePlan: (data: { id: string; name?: string; displayName?: string; description?: string; price?: number; currency?: string; durationDays?: number; isActive?: boolean }) =>
+  updatePlan: (data: { id: string; name?: string; displayName?: string; description?: string; features?: string[]; price?: number; currency?: string; durationDays?: number; isActive?: boolean; permissionIds?: string[] }) =>
     api.post<ApiResponse<Plan>>('/plans/update', data),
   deletePlan: (id: string) =>
     api.post<ApiResponse>('/plans/delete', { id }),

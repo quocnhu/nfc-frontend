@@ -24,7 +24,7 @@ import type {
 export const authApi = {
   signin: (data: { email: string; password: string }) =>
     api.post<ApiResponse>("/auth/signin", data),
-  signup: (data: { email: string; password: string; fullname: string }) =>
+  signup: (data: { email: string; password: string; fullname: string; userType?: string }) =>
     api.post<ApiResponse>("/auth/signup", data),
   logout: () => api.post<ApiResponse>("/auth/logout"),
   requestReset: (data: { email: string }) =>

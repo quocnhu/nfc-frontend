@@ -17,10 +17,14 @@ export function useAvatarSync() {
   const currentUserId = (session?.user as any)?.id as string | undefined;
   const { setAvatarUrl } = useAvatar();
 
-  /** Push new avatar to both AvatarContext AND NextAuth session */
+  /** Push new avatar to AvatarContext (always) and NextAuth session (best-effort) */
   const syncAvatar = async (avatarUrl: string) => {
     setAvatarUrl(avatarUrl);
-    await update({ avatarUrl });
+    try {
+      await update({ avatarUrl });
+    } catch {
+      // Session update is best-effort — context is already updated
+    }
   };
 
   /** Profile page – upload own avatar (self-upload endpoint) */

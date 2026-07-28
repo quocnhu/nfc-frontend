@@ -3,7 +3,7 @@ import { notification } from "antd";
 
 const api = axios.create({
   baseURL: "/backend-api",
-  timeout: 15000,
+  timeout: 0,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
@@ -104,12 +104,6 @@ api.interceptors.response.use(
         `[API Error] ${err.config.method?.toUpperCase()} ${err.config.url} → ${err.response.status}:`,
         err.response.data
       );
-    } else if (err.code === "ECONNABORTED" || err.message?.includes("timeout")) {
-      notification.error({
-        message: "Network Timeout",
-        description: "The request took too long. Please check your connection and try again.",
-        duration: 4,
-      });
     } else {
       console.error("[API Error] Network error:", err.message);
     }

@@ -44,7 +44,7 @@ export default function RegisterPage() {
   const onFinish = async (values: { fullname: string; email: string; password: string; confirmPassword?: string }) => {
     try {
       const { confirmPassword, ...payload } = values;
-      await authApi.signup(payload);
+      await authApi.signup({ ...payload, userType: 'LOCAL' });
       messageApi.success({
         content: "Registration successful! Please check your email to verify your account.",
         duration: 13,

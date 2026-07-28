@@ -110,7 +110,6 @@ export default function ProfilePage() {
       });
 
       messageApi.success("Avatar updated successfully");
-      router.refresh();
       if ((user as any)?.id) {
         userdataApi
           .listAdminAvatars((user as any).id)
@@ -118,7 +117,7 @@ export default function ProfilePage() {
           .catch(() => {});
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Upload failed";
+      const msg = err?.response?.data?.message || err?.message || "Upload failed";
       messageApi.error(Array.isArray(msg) ? msg.join(", ") : msg);
     } finally {
       setUploading(false);
@@ -140,7 +139,6 @@ export default function ProfilePage() {
       await selectAvatar((user as any).id, filename);
       messageApi.success("Avatar updated");
       setFilePickerOpen(false);
-      router.refresh();
     } catch (err: any) {
       messageApi.error(err?.response?.data?.message || "Failed to select avatar");
     }
@@ -261,7 +259,8 @@ export default function ProfilePage() {
           <InfoRow icon={<UserOutlined style={{ fontSize: 18 }} />} label="Full Name" value={user?.name || "—"} iconBg="#4f46e5" />
           <InfoRow icon={<MailOutlined style={{ fontSize: 18 }} />} label="Email" value={user?.email || "—"} iconBg="#10b981" />
           <InfoRow icon={<SafetyOutlined style={{ fontSize: 18 }} />} label="Role" value={user?.role || "—"} iconBg={roleColor} />
-          <InfoRow icon={<KeyOutlined style={{ fontSize: 18 }} />} label="User ID (UUID)" value={(user as any)?.id || "—"} iconBg="#722ed1" isLast />
+          <InfoRow icon={<KeyOutlined style={{ fontSize: 18 }} />} label="User Type" value={(user as any)?.userType || "LOCAL"} iconBg="#08979c" />
+          <InfoRow icon={<IdcardOutlined style={{ fontSize: 18 }} />} label="User ID (UUID)" value={(user as any)?.id || "—"} iconBg="#722ed1" isLast />
         </div>
 
         <Divider style={{ margin: "20px 0 16px" }} />

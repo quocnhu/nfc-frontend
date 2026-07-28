@@ -112,20 +112,23 @@ export default function DashboardPage() {
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const [statsRes, activityRes, suspiciousRes, subRes, payRes, growthRes] = await Promise.all([
-        dashboardApi.stats(),
-        dashboardApi.activity(20),
-        dashboardApi.suspicious().catch(() => null),
-        dashboardApi.subscriptionStats(),
-        dashboardApi.paymentStats(),
-        dashboardApi.growth(),
-      ]);
-      setStats(statsRes.data?.data || null);
-      setActivity(activityRes.data?.data || []);
-      setSuspicious(suspiciousRes?.data?.data || null);
-      setSubscriptionStats(subRes.data?.data || null);
-      setPaymentStats(payRes.data?.data || null);
-      setGrowthData(growthRes.data?.data || null);
+    const results = await Promise.allSettled([
+      dashboardApi.stats(),
+      dashboardApi.activity(20),
+      dashboardApi.suspicious(),
+      dashboardApi.subscriptionStats(),
+      dashboardApi.paymentStats(),
+      dashboardApi.growth(),
+    ]);
+    const [statsRes, activityRes, suspiciousRes, subRes, payRes, growthRes] = results.map((r) =>
+      r.status === "fulfilled" ? r.value : null,
+    );
+    setStats(statsRes?.data?.data || null);
+    setActivity(activityRes?.data?.data || []);
+    setSuspicious(suspiciousRes?.data?.data || null);
+    setSubscriptionStats(subRes?.data?.data || null);
+    setPaymentStats(payRes?.data?.data || null);
+    setGrowthData(growthRes?.data?.data || null);
     } finally {
       setRefreshing(false);
       setInitialLoading(false);

@@ -68,6 +68,9 @@ export default function UsersPage() {
   const [avatarPendingFile, setAvatarPendingFile] = useState<File | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [loadingPerms, setLoadingPerms] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
@@ -112,42 +115,57 @@ export default function UsersPage() {
 
   const load = async () => {
     setLoading(true);
+
+    // Load permissions first (determines what user can see)
     try {
-      const [usersRes, rolesRes, permsRes, myPermsRes] = await Promise.allSettled([
-        userApi.list({ page: 1, limit: 50 }),
-        roleApi.list(),
-        permissionApi.list(),
-        dashboardApi.permissions(),
-      ]);
-      if (usersRes.status === "fulfilled") {
-        setUsers(usersRes.value.data?.data?.data || []);
-      } else {
-        console.error("Failed to load users:", usersRes.reason);
-        messageApi.error("Failed to load users");
-      }
-      if (rolesRes.status === "fulfilled") {
-        setRoles(rolesRes.value.data?.data || []);
-      } else {
-        console.error("Failed to load roles:", rolesRes.reason);
-      }
-      if (permsRes.status === "fulfilled") {
-        setPermissions(permsRes.value.data?.data || []);
-      } else {
-        console.error("Failed to load permissions:", permsRes.reason);
-      }
-      if (myPermsRes.status === "fulfilled") {
-        const permData = myPermsRes.value.data?.data;
-        setCurrentUserPermissions(permData?.mergedPermissions || []);
-        setCurrentUserId(permData?.user?.id || "");
-      } else {
-        console.error("Failed to load permissions:", myPermsRes.reason);
-      }
-    } catch (err) {
-      console.error("Failed to load data:", err);
-      messageApi.error("Failed to load data");
-    } finally {
-      setLoading(false);
+      const myPermsRes = await dashboardApi.permissions();
+      const permData = myPermsRes.data?.data;
+      setCurrentUserPermissions(permData?.mergedPermissions || []);
+      setCurrentUserId(permData?.user?.id || "");
+    } catch {
+      console.error("Failed to load permissions");
     }
+
+    setLoading(false);
+
+    // Load users, roles, permissions independently
+    const loadUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const res = await userApi.list({ page: 1, limit: 50 });
+        setUsers(res.data?.data?.data || []);
+      } catch (err) {
+        console.error("Failed to load users:", err);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    const loadRoles = async () => {
+      setLoadingRoles(true);
+      try {
+        const res = await roleApi.list();
+        setRoles(res.data?.data || []);
+      } catch (err) {
+        console.error("Failed to load roles:", err);
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+
+    const loadPerms = async () => {
+      setLoadingPerms(true);
+      try {
+        const res = await permissionApi.list();
+        setPermissions(res.data?.data || []);
+      } catch (err) {
+        console.error("Failed to load permissions:", err);
+      } finally {
+        setLoadingPerms(false);
+      }
+    };
+
+    await Promise.allSettled([loadUsers(), loadRoles(), loadPerms()]);
   };
 
   const hasReadAll = currentUserPermissions.includes("read:user:all");
@@ -576,6 +594,21 @@ export default function UsersPage() {
       },
     },
     {
+      title: "User Type",
+      key: "userType",
+      align: 'center' as const,
+      filters: [
+        { text: "LOCAL", value: "LOCAL" },
+        { text: "GOOGLE", value: "GOOGLE" },
+      ],
+      onFilter: (value: any, record: User) => record.userType === value,
+      render: (_: any, record: User) => (
+        <Tag color={record.userType === 'GOOGLE' ? '#ea4335' : '#1677ff'}>
+          {record.userType || 'LOCAL'}
+        </Tag>
+      ),
+    },
+    {
       title: "Plan",
       key: "subscription",
       width: 120,
@@ -737,7 +770,7 @@ export default function UsersPage() {
                   )}
                 </Space>
                 <Table
-                  loading={loading}
+                  loading={loadingUsers}
                   columns={userColumns}
                   dataSource={users}
                   rowKey="id"
@@ -779,46 +812,46 @@ export default function UsersPage() {
                         )}
                       </Space>
                       <Table
-                        loading={loading}
-                        columns={roleColumns}
-                        dataSource={roles}
-                        rowKey="id"
-                        scroll={{ x: 'max-content' }}
-                        pagination={{ current: rolesPagination.current, pageSize: rolesPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} roles`, onChange: (page, size) => setRolesPagination({ current: page, pageSize: size }) }}
-                        rowSelection={{
-                          selectedRowKeys: bulkSelectedRoleIds,
-                          onChange: (keys) => setBulkSelectedRoleIds(keys.map(k => String(k))),
-                          getCheckboxProps: (record: Role) => ({
-                            disabled: record.name === "ADMIN",
-                          }),
-                        }}
-                      />
-                    </>
-                  ),
-                },
-                {
-                  key: "permissions",
-                  label: "Permissions",
-                  children: <Table loading={loading} columns={permColumns} dataSource={permissions} key="permissions" rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: permsPagination.current, pageSize: permsPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} permissions`, onChange: (page, size) => setPermsPagination({ current: page, pageSize: size }) }} />,
-                },
-              ]
-            : [
-                ...(hasReadRole
-                  ? [{
-                      key: "roles",
-                      label: "Roles",
-                      children: (
-                        <Table loading={loading} columns={roleColumns} dataSource={roles} key="roles-view" rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: rolesPagination.current, pageSize: rolesPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} roles`, onChange: (page, size) => setRolesPagination({ current: page, pageSize: size }) }} />
-                      ),
-                    }]
-                  : []),
-                ...(hasReadPermission
-                  ? [{
-                      key: "permissions",
-                      label: "Permissions",
-                      children: <Table loading={loading} columns={permColumns} dataSource={permissions} key="permissions-view" rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: permsPagination.current, pageSize: permsPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} permissions`, onChange: (page, size) => setPermsPagination({ current: page, pageSize: size }) }} />,
-                    }]
-                  : []),
+loading={loadingRoles}
+                     columns={roleColumns}
+                     dataSource={roles}
+                     rowKey="id"
+                     scroll={{ x: 'max-content' }}
+                     pagination={{ current: rolesPagination.current, pageSize: rolesPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} roles`, onChange: (page, size) => setRolesPagination({ current: page, pageSize: size }) }}
+                     rowSelection={{
+                       selectedRowKeys: bulkSelectedRoleIds,
+                       onChange: (keys) => setBulkSelectedRoleIds(keys.map(k => String(k))),
+                       getCheckboxProps: (record: Role) => ({
+                         disabled: record.name === "ADMIN",
+                       }),
+                     }}
+                   />
+                 </>
+               ),
+             },
+             {
+               key: "permissions",
+               label: "Permissions",
+               children: <Table loading={loadingPerms} columns={permColumns} dataSource={permissions} key="permissions" rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: permsPagination.current, pageSize: permsPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} permissions`, onChange: (page, size) => setPermsPagination({ current: page, pageSize: size }) }} />,
+             },
+           ]
+         : [
+             ...(hasReadRole
+               ? [{
+                   key: "roles",
+                   label: "Roles",
+                   children: (
+                     <Table loading={loadingRoles} columns={roleColumns} dataSource={roles} key="roles-view" rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: rolesPagination.current, pageSize: rolesPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} roles`, onChange: (page, size) => setRolesPagination({ current: page, pageSize: size }) }} />
+                   ),
+                 }]
+               : []),
+             ...(hasReadPermission
+               ? [{
+                   key: "permissions",
+                   label: "Permissions",
+                   children: <Table loading={loadingPerms} columns={permColumns} dataSource={permissions} key="permissions-view" rowKey="id" scroll={{ x: 'max-content' }} pagination={{ current: permsPagination.current, pageSize: permsPagination.pageSize, showSizeChanger: true, showTotal: (total) => `Total ${total} permissions`, onChange: (page, size) => setPermsPagination({ current: page, pageSize: size }) }} />,
+                 }]
+               : []),
               ]),
         ]}
       />

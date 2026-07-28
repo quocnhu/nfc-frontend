@@ -46,14 +46,25 @@ export async function POST(req: Request) {
     return response;
   }
 
-  const setCookie = backendRes.headers.get("set-cookie") || "";
-  const accessToken = setCookie.split(";")[0]?.split("=")[1] || "";
-  const refreshTokenNew =
-    setCookie
-      .split(",")
-      .map((c) => c.split(";")[0]?.trim())
-      .find((c) => c.startsWith("refresh_token="))
-      ?.split("=")[1] || "";
+  const rawCookies = backendRes.headers.getSetCookie();
+  let accessToken = "";
+  let refreshTokenNew = "";
+
+  for (const cookie of rawCookies) {
+    const pair = cookie.split(";")[0].trim();
+    const eqIdx = pair.indexOf("=");
+    const name = pair.substring(0, eqIdx).trim();
+    const value = pair.substring(eqIdx + 1).trim();
+    if (name === "jwt") accessToken = value;
+    if (name === "refresh_token") refreshTokenNew = value;
+  }
+
+  // Fallback to response body if cookies not found
+  if (!accessToken || !refreshTokenNew) {
+    const body = await backendRes.json().catch(() => ({}));
+    if (body?.data?.access_token) accessToken = body.data.access_token;
+    if (body?.data?.refresh_token) refreshTokenNew = body.data.refresh_token;
+  }
 
   const response = NextResponse.json({ success: true });
 

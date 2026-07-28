@@ -45,6 +45,7 @@ export const authOptions: NextAuthOptions = {
           permissions: data.mergedPermissions || [],
           jwt: jwtValue,
           avatarUrl: data.user.avatarUrl || null,
+          userType: data.user.userType || 'LOCAL',
         };
       },
     }),
@@ -93,6 +94,7 @@ export const authOptions: NextAuthOptions = {
         token.permissions = (user as any).permissions;
         token.jwt = (user as any).jwt;
         token.avatarUrl = (user as any).avatarUrl || null;
+        token.userType = (user as any).userType || 'LOCAL';
       }
       if (trigger === 'update' && (session as any)?.avatarUrl) {
         token.avatarUrl = (session as any).avatarUrl;
@@ -106,6 +108,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).permissions = (token as any).permissions ?? [];
         (session.user as any).jwt = (token as any).jwt || "";
         (session.user as any).avatarUrl = (token as any).avatarUrl || null;
+        (session.user as any).userType = (token as any).userType || 'LOCAL';
       }
       return session;
     },

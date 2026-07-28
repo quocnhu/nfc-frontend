@@ -113,6 +113,10 @@ function PublicUserPageContent() {
     return <VipTemplate user={user} items={items} />;
   }
 
+  if (roleName === 'COMPANY') {
+    return <UserTemplate user={user} items={items} />;
+  }
+
   return <UserTemplate user={user} items={items} />;
 }
 

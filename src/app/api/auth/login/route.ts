@@ -57,6 +57,8 @@ export async function POST(req: Request) {
       name: data.user.fullname,
       role: data.role,
       permissions: data.mergedPermissions || [],
+      userType: data.user.userType || 'LOCAL',
+      avatarUrl: data.user.avatarUrl || null,
     },
     maxAge: SESSION_MAX_AGE,
   });

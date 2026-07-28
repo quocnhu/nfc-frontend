@@ -26,6 +26,7 @@ export interface User {
   failedLoginCount?: number;
   lockedUntil?: string | null;
   status?: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
+  userType?: 'LOCAL' | 'GOOGLE';
   expiresAt?: string | null;
   createdAt: string;
   updatedAt: string;

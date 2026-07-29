@@ -1,7 +1,7 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -14,7 +14,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const signinRes = await fetch(`${BACKEND_URL}/auth/signin`, {
+        const signinRes = await fetch(`${BACKEND_URL}/api/auth/signin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -28,7 +28,7 @@ export const authOptions: NextAuthOptions = {
         const backendSetCookie = signinRes.headers.get("set-cookie");
         const jwtValue = backendSetCookie?.split(";")[0]?.split("=")[1] || "";
 
-        const permRes = await fetch(`${BACKEND_URL}/dashboard/permissions`, {
+        const permRes = await fetch(`${BACKEND_URL}/api/dashboard/permissions`, {
           headers: { Cookie: `jwt=${jwtValue}` },
         });
 

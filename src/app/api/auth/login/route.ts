@@ -1,7 +1,7 @@
 import { encode } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
 const REFRESH_MAX_AGE = 7 * 24 * 60 * 60;
 
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
 
-  const signinRes = await fetch(`${BACKEND_URL}/auth/signin`, {
+  const signinRes = await fetch(`${BACKEND_URL}/api/auth/signin`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     if (name === "refresh_token") refreshTokenValue = value;
   }
 
-  const permRes = await fetch(`${BACKEND_URL}/dashboard/permissions`, {
+  const permRes = await fetch(`${BACKEND_URL}/api/dashboard/permissions`, {
     headers: { Cookie: `jwt=${jwtValue}` },
   });
 

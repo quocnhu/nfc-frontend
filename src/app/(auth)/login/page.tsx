@@ -212,8 +212,8 @@ export default function LoginPage() {
             borderColor: "#dadce0",
           }}
           onClick={() => {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-            window.location.href = `${apiUrl}/auth/google`;
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+            window.location.href = `${apiUrl}/api/auth/google`;
           }}
         >
           <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">

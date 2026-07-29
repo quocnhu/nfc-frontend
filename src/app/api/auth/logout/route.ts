@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export async function POST() {
-  fetch(`${BACKEND_URL}/auth/logout`, { method: "POST" }).catch(() => {});
+  fetch(`${BACKEND_URL}/api/auth/logout`, { method: "POST" }).catch(() => {});
 
   const response = NextResponse.json({ success: true });
 

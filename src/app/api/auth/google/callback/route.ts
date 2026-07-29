@@ -1,7 +1,7 @@
 import { encode } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
 
 export async function GET(req: Request) {
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/login?error=google_auth_failed", req.url));
   }
 
-  const permRes = await fetch(`${BACKEND_URL}/dashboard/permissions`, {
+  const permRes = await fetch(`${BACKEND_URL}/api/dashboard/permissions`, {
     headers: { Cookie: `jwt=${accessToken}` },
   });
 

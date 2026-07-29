@@ -287,7 +287,7 @@ export default function HomePage() {
                 animation: welcomePhase >= 2 ? "marqueeScroll 12s linear infinite" : "none",
               }}
             >
-              Welcome to Nguyen Quốc Nhu&apos;s website&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyen Quốc Nhu&apos;s website&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyen Quốc Nhu&apos;s website
+              Welcome to Nguyễn Quốc Nhu&apos;s Website&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyễn Quốc Nhu&apos;s Website&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyễn Quốc Nhu&apos;s Website
             </div>
           </div>
         </div>

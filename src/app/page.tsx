@@ -184,9 +184,9 @@ export default function HomePage() {
   const [homepageData, setHomepageData] = useState<PublicHomepageData | null>(null);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setWelcomePhase(1), 300);
-    const t2 = setTimeout(() => setWelcomePhase(2), 1500);
-    const t3 = setTimeout(() => setWelcomePhase(3), 2800);
+    const t1 = setTimeout(() => setWelcomePhase(1), 400);
+    const t2 = setTimeout(() => setWelcomePhase(2), 1800);
+    const t3 = setTimeout(() => setWelcomePhase(3), 6000);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []);
 
@@ -284,7 +284,7 @@ export default function HomePage() {
                 color: "#667eea",
                 textTransform: "uppercase",
                 fontWeight: 500,
-                animation: welcomePhase >= 2 ? "marqueeScroll 4s linear infinite" : "none",
+                animation: welcomePhase >= 2 ? "marqueeScroll 12s linear infinite" : "none",
               }}
             >
               Welcome to Nguyen Quốc Nhu&apos;s website&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyen Quốc Nhu&apos;s website&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyen Quốc Nhu&apos;s website
@@ -359,22 +359,22 @@ export default function HomePage() {
           left: 0,
           right: 0,
           zIndex: 100,
-          padding: "14px 16px",
+          padding: "10px 12px",
           display: "flex",
-          flexWrap: "wrap",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: 8,
           background: "rgba(10,10,30,0.75)",
           backdropFilter: "blur(16px)",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        <Space size={8}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
           <div
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
+              width: 32,
+              height: 32,
+              borderRadius: 10,
               background: "linear-gradient(135deg, #667eea, #764ba2)",
               display: "flex",
               alignItems: "center",
@@ -383,15 +383,15 @@ export default function HomePage() {
               animation: "pulse 3s ease infinite",
             }}
           >
-            <Text strong style={{ color: "#fff", fontSize: 14, letterSpacing: 1, lineHeight: 1 }}>QN</Text>
+            <Text strong style={{ color: "#fff", fontSize: 12, letterSpacing: 1, lineHeight: 1 }}>QN</Text>
             <div
               style={{
                 position: "absolute",
-                top: -5,
-                right: -5,
-                width: 18,
-                height: 18,
-                borderRadius: 6,
+                top: -4,
+                right: -4,
+                width: 14,
+                height: 14,
+                borderRadius: 5,
                 background: "linear-gradient(135deg, #00d4ff, #00a0cc)",
                 display: "flex",
                 alignItems: "center",
@@ -399,16 +399,16 @@ export default function HomePage() {
                 border: "2px solid #0a0a1e",
               }}
             >
-              <CodeOutlined style={{ color: "#fff", fontSize: 9 }} />
+              <CodeOutlined style={{ color: "#fff", fontSize: 7 }} />
             </div>
             <div
               style={{
                 position: "absolute",
-                bottom: -5,
-                right: -5,
-                width: 18,
-                height: 18,
-                borderRadius: 6,
+                bottom: -4,
+                right: -4,
+                width: 14,
+                height: 14,
+                borderRadius: 5,
                 background: "linear-gradient(135deg, #ffd93d, #e6b800)",
                 display: "flex",
                 alignItems: "center",
@@ -416,24 +416,26 @@ export default function HomePage() {
                 border: "2px solid #0a0a1e",
               }}
             >
-              <EnvironmentOutlined style={{ color: "#fff", fontSize: 9 }} />
+              <EnvironmentOutlined style={{ color: "#fff", fontSize: 7 }} />
             </div>
           </div>
-          <Text strong style={{ fontSize: 16, color: "#fff", letterSpacing: 0.5 }}>
+          <Text strong style={{ fontSize: 14, color: "#fff", letterSpacing: 0.5 }}>
             Quoc Nhu
           </Text>
-        </Space>
-        <Space size={12}>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
           <Button
             type="text"
-            style={{ color: "#ccc" }}
+            size="small"
+            style={{ color: "#ccc", fontSize: 13 }}
             onClick={() => document.getElementById("it-section")?.scrollIntoView({ behavior: "smooth" })}
           >
             IT
           </Button>
           <Button
             type="text"
-            style={{ color: "#ccc" }}
+            size="small"
+            style={{ color: "#ccc", fontSize: 13 }}
             onClick={() => document.getElementById("tour-section")?.scrollIntoView({ behavior: "smooth" })}
           >
             Tour Guide
@@ -444,9 +446,10 @@ export default function HomePage() {
             <Tooltip title="Go to Dashboard">
               <Button
                 type="primary"
+                size="small"
                 icon={<RightOutlined />}
                 onClick={() => router.push("/profile")}
-                style={{ borderRadius: 20, background: "linear-gradient(135deg, #667eea, #764ba2)", border: "none" }}
+                style={{ borderRadius: 20, background: "linear-gradient(135deg, #667eea, #764ba2)", border: "none", fontSize: 13 }}
               >
                 Dashboard
               </Button>
@@ -454,14 +457,15 @@ export default function HomePage() {
           ) : (
             <Button
               type="primary"
+              size="small"
               icon={<LoginOutlined />}
               onClick={() => router.push("/login")}
-              style={{ borderRadius: 20, background: "linear-gradient(135deg, #667eea, #764ba2)", border: "none" }}
+              style={{ borderRadius: 20, background: "linear-gradient(135deg, #667eea, #764ba2)", border: "none", fontSize: 13 }}
             >
               Login
             </Button>
           )}
-        </Space>
+        </div>
       </nav>
 
       {/* ─── HERO ─── */}

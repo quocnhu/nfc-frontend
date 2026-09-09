@@ -596,8 +596,10 @@ export default function HomePage() {
                       { label: "VMware ESXi", color: "#69656a", icon: <SiVmware /> },
                       { label: "Proxmox", color: "#e57000", icon: <SiProxmox /> },
                     ]},
-                    { label: "Cloud AWS", color: "#ff9900", icon: <FaAws /> },
-                    { label: "Cloud Google", color: "#34d399", icon: <SiGooglecloud /> },
+                    { label: "Cloud Service", color: "#38bdf8", icon: <CloudServerOutlined />, children: [
+                      { label: "Cloud AWS", color: "#ff9900", icon: <FaAws /> },
+                      { label: "Cloud Google", color: "#34d399", icon: <SiGooglecloud /> },
+                    ]},
                     { label: "Bash Scripting", color: "#4eaa25", icon: <SiGnubash /> },
                   ] as Array<{ label: string; color: string; icon: React.ReactNode; children?: { label: string; color: string; icon: React.ReactNode }[] }>).map((item) =>
                     item.children ? (

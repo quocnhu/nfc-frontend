@@ -18,6 +18,8 @@ import {
   BellOutlined,
   CrownOutlined,
   TranslationOutlined,
+  CodeOutlined,
+  EnvironmentOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
@@ -177,20 +179,84 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            gap: 10,
             borderBottom: "1px solid rgba(255,255,255,0.08)",
           }}
         >
-          <Typography.Title
-            level={4}
-            style={{
-              color: "#fff",
-              margin: 0,
-              fontSize: collapsed ? 16 : 18,
-              fontWeight: 700,
-            }}
-          >
-            {collapsed ? "QN" : "QuocNhu"}
-          </Typography.Title>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                background: "linear-gradient(135deg, #667eea, #764ba2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+                animation: "sidebarLogoPulse 3s ease infinite",
+                flexShrink: 0,
+              }}
+            >
+              <Typography.Text strong style={{ color: "#fff", fontSize: 12, letterSpacing: 1, lineHeight: 1 }}>
+                QN
+              </Typography.Text>
+              <div
+                style={{
+                  position: "absolute",
+                  top: -4,
+                  right: -4,
+                  width: 13,
+                  height: 13,
+                  borderRadius: 5,
+                  background: "linear-gradient(135deg, #00d4ff, #00a0cc)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "2px solid #0a0a1e",
+                }}
+              >
+                <CodeOutlined style={{ color: "#fff", fontSize: 6 }} />
+              </div>
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: -4,
+                  right: -4,
+                  width: 13,
+                  height: 13,
+                  borderRadius: 5,
+                  background: "linear-gradient(135deg, #ffd93d, #e6b800)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "2px solid #0a0a1e",
+                }}
+              >
+                <EnvironmentOutlined style={{ color: "#fff", fontSize: 6 }} />
+              </div>
+            </div>
+            {!collapsed && (
+              <Typography.Title
+                level={4}
+                style={{
+                  color: "#fff",
+                  margin: 0,
+                  fontSize: 18,
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                QuocNhu
+              </Typography.Title>
+            )}
+          </div>
+          <style jsx global>{`
+            @keyframes sidebarLogoPulse {
+              0%, 100% { box-shadow: 0 0 12px #667eea55; }
+              50% { box-shadow: 0 0 24px #764ba2aa; }
+            }
+          `}</style>
         </div>
         <Menu
           theme="dark"

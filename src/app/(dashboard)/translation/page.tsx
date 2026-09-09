@@ -27,6 +27,7 @@ import {
   HistoryOutlined,
   ArrowRightOutlined,
   BookOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { translationApi } from "@/lib/api";
 import { useTheme } from "@/components/providers/AntdProvider";
@@ -172,6 +173,12 @@ export default function TranslationPage() {
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [editTarget, setEditTarget] = useState<{
+    id: string;
+    sourceText: string;
+    translatedText: string;
+  } | null>(null);
+  const [editTexts, setEditTexts] = useState({ sourceText: "", translatedText: "" });
 
   const inputRefs = useRef<Record<string, { focus: () => void } | null>>({});
 
@@ -455,11 +462,59 @@ export default function TranslationPage() {
     messageApi.success("Copied to clipboard");
   };
 
+  const openEdit = (id: string, sourceText: string, translatedText: string) => {
+    setEditTexts({ sourceText, translatedText });
+    setEditTarget({ id, sourceText, translatedText });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTarget) return;
+    const sourceText = editTexts.sourceText.trim();
+    const translatedText = editTexts.translatedText.trim();
+    const serverIdSet = new Set(histories.map((h) => h.id));
+
+    // Update the box sentence immediately (local).
+    setBoxes((prev) =>
+      prev.map((b) => ({
+        ...b,
+        sentences: b.sentences.map((s) =>
+          s.id === editTarget.id
+            ? { ...s, input: sourceText, output: translatedText }
+            : s
+        ),
+      }))
+    );
+
+    // Persist to the backend only if this is a real server record.
+    if (serverIdSet.has(editTarget.id)) {
+      try {
+        await translationApi.update({ id: editTarget.id, sourceText, translatedText });
+        loadHistories();
+      } catch (err: unknown) {
+        messageApi.error(extractApiError(err, "Failed to update translation"));
+      }
+    }
+    setEditTarget(null);
+  };
+
   // ─── Management table (history) ───
+  // Removes matching sentences from the language boxes (they share the translation id).
+  const removeFromBoxes = (ids: string[]) => {
+    if (!ids.length) return;
+    const idSet = new Set(ids);
+    setBoxes((prev) =>
+      prev.map((b) => ({
+        ...b,
+        sentences: b.sentences.filter((s) => !idSet.has(s.id)),
+      }))
+    );
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await translationApi.remove(id);
       messageApi.success("Translation deleted");
+      removeFromBoxes([id]);
       loadHistories();
     } catch (err: unknown) {
       messageApi.error(extractApiError(err, "Failed to delete"));
@@ -472,6 +527,7 @@ export default function TranslationPage() {
       const ids = selectedRowKeys.map((k) => String(k));
       await translationApi.bulkDelete(ids);
       messageApi.success(`Deleted ${ids.length} translation(s)`);
+      removeFromBoxes(ids);
       setSelectedRowKeys([]);
       loadHistories();
     } catch (err: unknown) {
@@ -547,6 +603,14 @@ export default function TranslationPage() {
               size="small"
               icon={<CopyOutlined />}
               onClick={() => handleCopy(record.translatedText)}
+            />
+          </Tooltip>
+          <Tooltip title="Edit translation">
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => openEdit(record.id, record.sourceText, record.translatedText)}
             />
           </Tooltip>
           <Popconfirm
@@ -806,6 +870,14 @@ export default function TranslationPage() {
                               onClick={() => handleCopy(row.output)}
                             />
                           </Tooltip>
+                          <Tooltip title="Edit sentence">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<EditOutlined />}
+                              onClick={() => openEdit(row.id, row.input, row.output)}
+                            />
+                          </Tooltip>
                           <Popconfirm
                             title="Remove this sentence?"
                             onConfirm={() => removeSentence(activeBox.boxId, row.id)}
@@ -887,6 +959,52 @@ export default function TranslationPage() {
                     Add a new sentence
                   </Button>
                 )}
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* ─── Edit sentence modal (shared by boxes and history table) ─── */}
+        <Modal
+          open={!!editTarget}
+          onOk={handleSaveEdit}
+          onCancel={() => setEditTarget(null)}
+          width={560}
+          okText="Save"
+          cancelText="Cancel"
+          title={
+            <Space size={8}>
+              <EditOutlined style={{ color: "#667eea" }} />
+              Edit sentence
+            </Space>
+          }
+          destroyOnClose
+        >
+          {editTarget && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8 }}>
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
+                  Input
+                </Typography.Text>
+                <TextArea
+                  value={editTexts.sourceText}
+                  onChange={(e) => setEditTexts((prev) => ({ ...prev, sourceText: e.target.value }))}
+                  autoSize={{ minRows: 2, maxRows: 5 }}
+                  maxLength={5000}
+                  style={{ resize: "none", borderRadius: 10 }}
+                />
+              </div>
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
+                  Output
+                </Typography.Text>
+                <TextArea
+                  value={editTexts.translatedText}
+                  onChange={(e) => setEditTexts((prev) => ({ ...prev, translatedText: e.target.value }))}
+                  autoSize={{ minRows: 2, maxRows: 5 }}
+                  maxLength={5000}
+                  style={{ resize: "none", borderRadius: 10 }}
+                />
               </div>
             </div>
           )}

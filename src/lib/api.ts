@@ -248,6 +248,8 @@ export const qrApi = {
 export const translationApi = {
   translate: (data: { sourceText: string; sourceLang: string; targetLang: string }) =>
     api.post<ApiResponse<Translation>>('/translation', data),
+  update: (data: { id: string; sourceText?: string; translatedText?: string }) =>
+    api.post<ApiResponse<Translation>>('/translation/update', data),
   myTranslations: () =>
     api.get<ApiResponse<Translation[]>>('/translation/me'),
   list: () =>

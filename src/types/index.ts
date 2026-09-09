@@ -127,6 +127,17 @@ export interface QRCode {
   createdAt: string;
 }
 
+export interface Translation {
+  id: string;
+  userId: string;
+  sourceText: string;
+  translatedText: string;
+  sourceLang: string;
+  targetLang: string;
+  createdAt: string;
+  user?: { id: string; fullname: string; email: string };
+}
+
 export interface SuspiciousAlert {
   type: 'brute_force_ip' | 'brute_force_account' | 'high_failure_rate' | 'permission_change' | 'deletion';
   severity: 'high' | 'medium' | 'low';

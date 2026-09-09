@@ -17,6 +17,7 @@ import {
   DollarOutlined,
   BellOutlined,
   CrownOutlined,
+  TranslationOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
@@ -73,6 +74,11 @@ const routeMap: Record<
     icon: <HistoryOutlined />,
     label: "History",
     permission: "read:history",
+  },
+  "/translation": {
+    icon: <TranslationOutlined />,
+    label: "Translations",
+    permission: "read:translation",
   },
   "/homepage": {
     icon: <HomeOutlined />,

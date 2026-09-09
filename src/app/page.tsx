@@ -22,6 +22,8 @@ import {
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { homepageApi, type PublicHomepageData } from "@/lib/api";
+import { SiDocker, SiKubernetes, SiTerraform, SiPrometheus, SiGrafana, SiArgo, SiCircleci, SiCisco, SiLinux, SiVmware, SiProxmox, SiGooglecloud, SiGnubash } from "react-icons/si";
+import { FaAws, FaMicrosoft } from "react-icons/fa6";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -587,17 +589,17 @@ export default function HomePage() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {([
-                    { label: "CCNA", color: "#00d4ff" },
-                    { label: "MCSA", color: "#00a4ef" },
-                    { label: "Linux", color: "#f5c842" },
-                    { label: "VMware", color: "#69656a", children: [
-                      { label: "VMware ESXi", color: "#69656a" },
-                      { label: "Proxmox", color: "#e57000" },
+                    { label: "CCNA", color: "#00d4ff", icon: <SiCisco /> },
+                    { label: "MCSA", color: "#00a4ef", icon: <FaMicrosoft /> },
+                    { label: "Linux", color: "#f5c842", icon: <SiLinux /> },
+                    { label: "VMware", color: "#69656a", icon: <SiVmware />, children: [
+                      { label: "VMware ESXi", color: "#69656a", icon: <SiVmware /> },
+                      { label: "Proxmox", color: "#e57000", icon: <SiProxmox /> },
                     ]},
-                    { label: "Cloud AWS", color: "#ff9900" },
-                    { label: "Cloud Google", color: "#34d399" },
-                    { label: "Bash Scripting", color: "#4eaa25" },
-                  ] as Array<{ label: string; color: string; children?: { label: string; color: string }[] }>).map((item) =>
+                    { label: "Cloud AWS", color: "#ff9900", icon: <FaAws /> },
+                    { label: "Cloud Google", color: "#34d399", icon: <SiGooglecloud /> },
+                    { label: "Bash Scripting", color: "#4eaa25", icon: <SiGnubash /> },
+                  ] as Array<{ label: string; color: string; icon: React.ReactNode; children?: { label: string; color: string; icon: React.ReactNode }[] }>).map((item) =>
                     item.children ? (
                       <div key={`g-${item.label}`} style={{ borderRadius: 12, background: "rgba(255,255,255,0.03)", border: `1px solid ${item.color}22`, overflow: "hidden" }}>
                         <div
@@ -605,7 +607,18 @@ export default function HomePage() {
                           onMouseEnter={(e) => { e.currentTarget.style.background = `${item.color}0a`; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                         >
-                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: item.color, flexShrink: 0, boxShadow: `0 0 8px ${item.color}66` }} />
+                          <div
+                            style={{
+                              fontSize: 15,
+                              color: item.color,
+                              flexShrink: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              filter: `drop-shadow(0 0 6px ${item.color}55)`,
+                            }}
+                          >
+                            {item.icon}
+                          </div>
                           <Text strong style={{ color: "#e0e0e0", fontSize: 14 }}>{item.label}</Text>
                         </div>
                         <div style={{ borderTop: `1px solid ${item.color}15` }}>
@@ -616,7 +629,18 @@ export default function HomePage() {
                               onMouseEnter={(e) => { e.currentTarget.style.background = `${child.color}0a`; }}
                               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                             >
-                              <div style={{ width: 6, height: 6, borderRadius: "50%", background: child.color, flexShrink: 0, boxShadow: `0 0 6px ${child.color}66` }} />
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  color: child.color,
+                                  flexShrink: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  filter: `drop-shadow(0 0 5px ${child.color}55)`,
+                                }}
+                              >
+                                {child.icon}
+                              </div>
                               <Text style={{ color: "#c0c0c0", fontSize: 13 }}>{child.label}</Text>
                             </div>
                           ))}
@@ -629,7 +653,18 @@ export default function HomePage() {
                         onMouseEnter={(e) => { e.currentTarget.style.background = `${item.color}0a`; e.currentTarget.style.borderColor = `${item.color}33`; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}
                       >
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: item.color, flexShrink: 0, boxShadow: `0 0 8px ${item.color}66` }} />
+                        <div
+                          style={{
+                            fontSize: 15,
+                            color: item.color,
+                            flexShrink: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            filter: `drop-shadow(0 0 6px ${item.color}55)`,
+                          }}
+                        >
+                          {item.icon}
+                        </div>
                         <Text strong style={{ color: "#e0e0e0", fontSize: 14 }}>{item.label}</Text>
                       </div>
                     )
@@ -669,12 +704,13 @@ export default function HomePage() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {[
-                    { label: "Docker", color: "#2496ed" },
-                    { label: "Kubernetes", color: "#818cf8" },
-                    { label: "Prometheus", color: "#ef4444" },
-                    { label: "Grafana", color: "#f97316" },
-                    { label: "ArgoCD", color: "#a78bfa" },
-                    { label: "CI/CD", color: "#22c55e" },
+                    { label: "Docker", color: "#2496ed", icon: <SiDocker /> },
+                    { label: "Kubernetes", color: "#818cf8", icon: <SiKubernetes /> },
+                    { label: "Terraform", color: "#7b42bc", icon: <SiTerraform /> },
+                    { label: "Prometheus", color: "#ef4444", icon: <SiPrometheus /> },
+                    { label: "Grafana", color: "#f97316", icon: <SiGrafana /> },
+                    { label: "ArgoCD", color: "#a78bfa", icon: <SiArgo /> },
+                    { label: "CI/CD", color: "#22c55e", icon: <SiCircleci /> },
                   ].map((item) => (
                     <div
                       key={item.label}
@@ -691,19 +727,21 @@ export default function HomePage() {
                       onMouseEnter={(e) => { e.currentTarget.style.background = `${item.color}0a`; e.currentTarget.style.borderColor = `${item.color}33`; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}
                     >
-                      <div
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: item.color,
-                          flexShrink: 0,
-                          boxShadow: `0 0 8px ${item.color}66`,
-                        }}
-                      />
-                      <div>
-                        <Text strong style={{ color: "#e0e0e0", fontSize: 14 }}>{item.label}</Text>
-                      </div>
+<div
+                      style={{
+                        fontSize: 16,
+                        color: item.color,
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        filter: `drop-shadow(0 0 6px ${item.color}55)`,
+                      }}
+                    >
+                      {item.icon}
+                    </div>
+                    <div>
+                      <Text strong style={{ color: "#e0e0e0", fontSize: 14 }}>{item.label}</Text>
+                    </div>
                     </div>
                   ))}
                 </div>

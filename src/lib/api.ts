@@ -13,6 +13,7 @@ import type {
   Folder,
   UploadedFile,
   QRCode,
+  Translation,
   SuspiciousActivity,
   Payment,
   PaymentStatus,
@@ -242,6 +243,24 @@ export const qrApi = {
     api.delete<ApiResponse>(`/qr/${id}`),
   bulkDelete: (ids: string[]) =>
     api.post<ApiResponse>('/qr/bulk-delete', { ids }),
+};
+
+export const translationApi = {
+  translate: (data: { sourceText: string; sourceLang: string; targetLang: string }) =>
+    api.post<ApiResponse<Translation>>('/translation', data),
+  myTranslations: () =>
+    api.get<ApiResponse<Translation[]>>('/translation/me'),
+  list: () =>
+    api.get<ApiResponse<Translation[]>>('/translation'),
+  tts: (text: string, lang: string) =>
+    api.get<ApiResponse<{ audio: string; mimeType?: string; engine?: string; voice?: string; lang: string }>>(
+      '/translation/tts',
+      { params: { text, lang } }
+    ),
+  remove: (id: string) =>
+    api.delete<ApiResponse>(`/translation/${id}`),
+  bulkDelete: (ids: string[]) =>
+    api.post<ApiResponse>('/translation/bulk-delete', { ids }),
 };
 
 export const paymentApi = {

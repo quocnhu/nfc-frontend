@@ -26,7 +26,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
 import { useAvatar } from "@/components/providers/AvatarProvider";
-import { paymentApi } from "@/lib/api";
+import { paymentApi, dashboardApi } from "@/lib/api";
 import type { PaymentStatus } from "@/types";
 import { RouteLoader } from "@/components/common/RouteLoader";
 
@@ -35,7 +35,7 @@ const { Header, Sider, Content } = Layout;
 
 const routeMap: Record<
   string,
-  { icon: React.ReactNode; label: string; permission: string; hideForAdmin?: boolean }
+  { icon: React.ReactNode; label: string; permission: string; }
 > = {
   "/dashboard": {
     icon: <DashboardOutlined />,
@@ -65,12 +65,12 @@ const routeMap: Record<
   "/folder": {
     icon: <FolderOpenOutlined />,
     label: "My Files",
-    permission: "",
+    permission: "read:upload",
   },
   "/qr": {
     icon: <QrcodeOutlined />,
     label: "QR Codes",
-    permission: "",
+    permission: "read:qr",
   },
   "/history": {
     icon: <HistoryOutlined />,
@@ -96,12 +96,22 @@ const routeMap: Record<
     icon: <CrownOutlined />,
     label: "Upgrade",
     permission: "",
-    hideForAdmin: true,
   },
   "/profile": { icon: <SettingOutlined />, label: "Profile", permission: "" },
 };
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({
+  children,
+  initialAccess,
+}: {
+  children: React.ReactNode;
+  initialAccess?: {
+    role?: string;
+    permissions?: string[];
+    createdBy?: string | null;
+    needsUpgrade?: boolean;
+  } | null;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const router = useRouter();
@@ -109,6 +119,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const { isDark, toggle } = useTheme();
   const { avatarUrl } = useAvatar();
+
+  // Live access snapshot from the backend (refreshes on navigation so role/permission
+  // changes take effect immediately instead of waiting for the 7-day session expiry).
+  const [liveAccess, setLiveAccess] = useState<{
+    role?: string;
+    permissions?: string[];
+    createdBy?: string | null;
+    needsUpgrade?: boolean;
+  } | null>(initialAccess ?? null);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 992px)");
@@ -126,29 +145,54 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   }, [session, pathname]);
 
+  useEffect(() => {
+    if (!session?.user) return;
+    let active = true;
+    dashboardApi
+      .permissions()
+      .then((res) => {
+        const d = res.data?.data;
+        if (!active) return;
+        setLiveAccess({
+          role: d?.role,
+          permissions: d?.mergedPermissions || [],
+          createdBy: d?.user?.createdBy || null,
+          needsUpgrade: d?.needsUpgrade,
+        });
+      })
+.catch(() => {
+        if (!active) return;
+        setLiveAccess({
+          role: (session?.user as any)?.role as string,
+          permissions: ((session?.user as any)?.permissions as string[]) || [],
+          createdBy: null,
+          needsUpgrade: undefined,
+        });
+      });
+    return () => {
+      active = false;
+    };
+  }, [pathname, session]);
+
   const user = session?.user;
 
-  const permissions = (user as any)?.permissions as string[] | undefined;
-  const userRole = (user as any)?.role as string | undefined;
-  const isAdmin = userRole === "ADMIN";
-  const isCompany = userRole === "COMPANY";
-  const hideUpgrade = isAdmin || isCompany;
+  const permissions = liveAccess?.permissions;
+  const showUpgrade = liveAccess?.needsUpgrade ?? false;
+  const menuReady = liveAccess !== null;
 
   const menuItems = useMemo(() => {
     if (!permissions) return [];
     return Object.entries(routeMap)
-      .filter(
-        ([key, item]) => {
-          if (item.hideForAdmin && hideUpgrade) return false;
-          return item.permission === "" || permissions.includes(item.permission);
-        }
-      )
+      .filter(([key, item]) => {
+        if (key === "/upgrade") return showUpgrade;
+        return item.permission === "" || permissions.includes(item.permission);
+      })
       .map(([key, item]) => ({
         key,
         icon: item.icon,
         label: item.label,
       }));
-  }, [permissions, hideUpgrade]);
+  }, [permissions, showUpgrade]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -258,14 +302,29 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             }
           `}</style>
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[pathname]}
-          items={menuItems}
-          onClick={({ key }) => router.push(key)}
-          style={{ borderRight: 0, flex: 1, overflow: "auto", marginBottom: 80 }}
-        />
+        {menuReady ? (
+          <Menu
+            theme="dark"
+            mode="inline"
+            selectedKeys={[pathname]}
+            items={menuItems}
+            onClick={({ key }) => router.push(key)}
+            style={{ borderRight: 0, flex: 1, overflow: "auto", marginBottom: 80 }}
+          />
+        ) : (
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "rgba(255,255,255,0.45)",
+              fontSize: 13,
+            }}
+          >
+            Loading…
+          </div>
+        )}
         <div
           style={{
             position: "absolute",
@@ -355,7 +414,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </Space>
 
           <Space size={12}>
-            {paymentStatus && !paymentStatus.isActive && !isAdmin && paymentStatus.currentSubscription?.plan && paymentStatus.currentSubscription.plan.name !== "FREE" && (
+            {paymentStatus && !paymentStatus.isActive && paymentStatus.currentSubscription?.plan && paymentStatus.currentSubscription.plan.name !== "FREE" && (
               <Badge dot>
                 <Button
                   type="text"

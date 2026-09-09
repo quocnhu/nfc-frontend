@@ -93,11 +93,12 @@ export interface RequestCounts {
 }
 
 export interface UserPermissions {
-  user: User;
+  user: User & { createdBy?: string | null };
   role: string;
   rolePermissions: string[];
   directPermissions: string[];
   mergedPermissions: string[];
+  needsUpgrade?: boolean;
 }
 
 export interface Folder {

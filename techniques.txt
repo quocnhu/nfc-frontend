@@ -1,0 +1,145 @@
+# Project Techniques & Notes (frontend: nfc-tap-frontend / backend: nest-prisma-app)
+
+Quick reference of the techniques, patterns, and gotchas used in this project.
+Read this when you need to remember how something works or why it was done a certain way.
+
+---
+
+## 1. Per-user data isolation
+
+Rule: users are individuals; they never see each other's data. Only admin sees everything,
+and only on tables where a `*:all` permission is granted.
+
+- **Server translations (Manage Input/Output table)**: backend filters first.
+  `translation.service.ts` `findMine()` uses `where: { userId: <token sub> }`. A normal user
+  only ever receives their own rows. Admin bypasses via the `read:translation:all` permission
+  (`translation.controller.ts` `hasPermission`).
+- **Learning Boxes (visual language-pair cards)**: SOURCE OF TRUTH IS THE SERVER.
+  `loadHistories()` (myTranslations) is used to BUILD the boxes by grouping rows per
+  language pair (`buildBoxesFromServer` in `translation/page.tsx`, `pairKey = src->tgt`,
+  boxId = pair key). So "Every sentence you add is collected here" shows up on My Learning
+  Boxes automatically, same data as Manage Input/Output, and isolation is automatic
+  (a user only gets their own rows server-side; admin gets all via `read:translation:all`).
+  - Boxes render ONLY after the server response arrives (`hydrated` gates the section). There is
+    NO localStorage restore step — restoring from cache first caused a flash (boxes appeared,
+    then vanished ~1s later when real data replaced them). Server is the single source of truth.
+  - Legacy key `fb.learningBoxes.v1*` is deleted on load so nobody inherits another user's boxes.
+- **Users table**: `GET /users` checks `read:user:all` (`user.controller.ts`). Without it,
+  `user.service.ts` forces `baseWhere = { id: currentUserId }` -> response contains only the
+  caller's own row.
+- **Manage Input/Output "Created" column shows the creator**: `findMine()` now includes
+  `user: { id, fullname, email }` (same as `findAll`), and the table renders the creator's
+  fullname/email + date. Never shows "You" — the real creator name is always displayed.
+
+## 2. Sidebar: permissions from the backend (no flash, no hardcoded roles)
+
+Symptom fixed: after login the sidebar showed everything (e.g. "Upgrade") for ~1s then hid items.
+
+- Root cause: the sidebar first rendered from stale JWT session permissions, then swapped to live
+  backend permissions when the fetch resolved.
+- Fix pattern (server-rendered first paint, zero "Loading..." gap):
+  - `src/app/(dashboard)/layout.tsx` is a **Server Component** (was "use client").
+    It reads the `jwt` httpOnly cookie (`await cookies()`), calls
+    `<NEXT_PUBLIC_API_URL>/api/dashboard/permissions` with `Cookie: jwt=<value>`, and passes the
+    result to `<DashboardShell initialAccess={...}>`.
+  - `DashboardShell` seeds `useState(initialAccess ?? null)`; menu renders only when
+    `liveAccess !== null` (a muted "Loading..." placeholder appears only if the server fetch
+    failed). On client-side navigation it refetches in the background — no flash.
+  - No hardcoded role names in the frontend: items filter on backend permissions
+    (`routeMap[].permission`), and "Upgrade" is controlled solely by `needsUpgrade` from
+    `/dashboard/permissions`.
+- Backend cookie: backend JWT strategy reads the token from the httpOnly `jwt` cookie.
+
+## 3. TTS: text-to-speech with native regional voices
+
+Endpoint `GET /api/translation/tts?text=&lang=` (auth, 200-char max) -> `{audio, mimeType, engine, voice, lang}`.
+
+Voice selection chain in `translation.service.ts` `speak()`:
+1. Gemini "Achernar" — `en-US` only, only if `GEMINI_API_KEY` set (currently dormant).
+2. Microsoft Edge neural via `EDGE_VOICES` (35 languages), with per-language fallback map
+   `EDGE_FALLBACK_VOICES` (all stream-verified).
+3. Google `translate_tts` as last resort.
+
+Examples: `ja` -> `ja-JP-NanamiNeural` (girl voices Aoi/Mayu fail msedge-tts streaming),
+`vi` -> `vi-VN-HoaiMyNeural` (South Vietnamese), `en` -> `en-GB-SoniaNeural`,
+`en-US` -> `en-US-JennyNeural`.
+
+Frontend TTS toggle is race-proof: `speakingKeyRef` / `ttsSeqRef` / `audioRef` so fast clicks
+can't interleave audio.
+
+## 4. Conversation / history <-> Learning Box sync
+
+- Deleting a history row (single `handleDelete` or bulk `handleBulkDelete`) also removes that
+  sentence from the matching box via `removeFromBoxes(ids)`.
+- Deleting a whole box (`removeBox`) also `bulkDelete`s its sentence ids on the server, so the
+  box cannot come back on reload. Boxes are rebuilt ONLY from server rows (`buildBoxesFromServer`);
+  there is no local resurrection of empty/ghost boxes — what you delete stays deleted.
+- Edit uses one shared modal (`editTarget` / `editTexts`, `openEdit` / `handleSaveEdit`) for both
+  box sentences and table rows.
+
+## 5. Update / Delete ownership checks (backend)
+
+- `POST /translation/update` (`UpdateTranslationDto`): ownership check plus bypass only when the
+  caller holds `delete:translation:all` (checked on the "delete"-style all permission by design).
+- `deleteOne` / `bulkDelete`: same pattern — own rows always editable by owner; admins bypass.
+
+## 6. Permission-driven backend security model
+
+- Roles, role->permission, and user->permission (direct grants) in the DB; seed in
+  `prisma/seed.ts`. Merge = role permissions + direct permissions.
+- Guards: `subscription.guard.ts` bypasses upgrade for ADMIN, VIP, COMPANY role, and users with
+  `createdBy` (managed/company accounts).
+- `payment.service.ts` reports managed / VIP users as ACTIVE/COMPANY (`isManagedAccount` logic).
+- `dashboard.service.ts` `getUserPermissions` AND `getUserPermissionsById` both compute
+  `needsUpgrade = ['ADMIN','VIP','COMPANY'].includes(role) ? false : !createdBy`.
+
+## 7. Secret hygiene (IMPORTANT)
+
+- `deploy-vercel.txt` is a deploy MAP/GUIDE only. It was miss-redacted once — a real Supabase key
+  `sb_secret_...` was committed (commit `224778c`, never pushed) and GitHub push protection
+  blocked it. The file now contains placeholders only (`<SUPABASE-SERVICE-ROLE-KEY>`, etc.).
+  The commit dump `224778c` still holds the old key — rotate the Supabase service-role key if it
+  was ever exposed.
+- `.env` is git-ignored; only `.env.example` is tracked. Never hardcode JWTs/secrets.
+- `prisma/seed.ts` still has `ADMIN_PASSWORD = "Admin@123"` — classic-credential risk; change via
+  env before any public push.
+- Dev `.env` in nest-prisma-app ships a real `POSTGRES_PRISMA_URL` — do not commit it.
+
+## 8. PayPal mode
+
+- Live mode only when `PAYPAL_MODE` is EXACTLY lowercase `live` (`paypal.config.ts`):
+  `mode === 'live'` -> LiveEnvironment, anything else (including unset) -> SandboxEnvironment.
+  No auto-fallback logic.
+
+## 9. Sidebar / UI patterns
+
+- Logo = gradient QN box + cyan code badge + yellow location badge + pulse animation
+  (sidebar header), matching the homepage.
+- IT section: "Cloud Service" parent grouping children "Cloud AWS" (`FaAws`) and
+  "Cloud Google" (`SiGooglecloud`).
+- Route-map permission strings: `""` = always visible; else must exist in merged permissions.
+
+## 10. Ops / dev commands
+
+Paths contain a trailing space: `.../f-booking /nfc-tap-frontend`, `.../f-booking /nest-prisma-app`.
+
+- Backend dev-run (prod mode): `npm run build` then restart:
+  `pkill -f "[d]ist/main"; sleep 2; (setsid nohup npm run start:prod > /tmp/opencode/nest.log 2>&1 &)`
+  Verify: `curl -s -o /dev/null -w "%{http_code}\n" http://localhost:4000/api/dashboard/permissions`
+  (401 = up). NEVER `pkill -f "dist/main"` without brackets — it kills the calling shell.
+- Frontend dev: `npm run dev`; API proxy: `/backend-api/:path*` ->
+  `$NEXT_PUBLIC_API_URL || http://localhost:4000/api/:path*` (`next.config.ts` rewrites).
+- Inspect DB directly with a node script: parse `POSTGRES_PRISMA_URL` from backend `.env`
+  (strip surrounding quotes), set `process.env.POSTGRES_PRISMA_URL`, instantiate PrismaClient.
+
+## 11. Next.js specifics
+
+- Next 16: `cookies()` is async -> `const cookieStore = await cookies()`.
+- Layouts do NOT re-run on client-side navigation — good for one-time server fetches per page load.
+- Server Component layout can render client components (`AuthGuard`, `DashboardShell`) and pass
+  serializable props (`initialAccess`).
+
+## 12. Known open items
+
+- Login page: `registrationEnabled` always defaults true (unused wiring) — not fixed.
+- Rotate the Supabase service-role key (see section 7).

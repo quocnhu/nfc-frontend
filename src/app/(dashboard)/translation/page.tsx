@@ -132,19 +132,47 @@ interface LanguageBox {
   sentences: SentenceRow[];
 }
 
-const STORAGE_KEY = "fb.learningBoxes.v1";
+const LEGACY_STORAGE_KEY = "fb.learningBoxes.v1";
 
-let boxCounter = 0;
 let fallbackIdCounter = 0;
-const nextBoxId = () => `box-${++boxCounter}-${Date.now().toString(36)}`;
 const nextFallbackId = (boxId: string) => `${boxId}-${++fallbackIdCounter}`;
 
+const pairKey = (a: string, b: string) => `${a}->${b}`;
+
+let transientBoxCounter = 0;
 const defaultBox = (): LanguageBox => ({
-  boxId: nextBoxId(),
+  boxId: `box-${++transientBoxCounter}-${Date.now().toString(36)}`,
   inputLang: "vi",
   outputLang: "en",
   sentences: [],
 });
+
+const buildBoxesFromServer = (rows: Translation[]): LanguageBox[] => {
+  const byPair = new Map<string, Translation[]>();
+  for (const r of rows) {
+    const k = pairKey(r.sourceLang, r.targetLang);
+    const group = byPair.get(k) ?? [];
+    group.push(r);
+    byPair.set(k, group);
+  }
+  return Array.from(byPair.values())
+    .sort(
+      (a, b) =>
+        Math.max(...b.map((r) => Number(new Date(r.createdAt)))) -
+        Math.max(...a.map((r) => Number(new Date(r.createdAt))))
+    )
+    .map((group) => ({
+      boxId: pairKey(group[0].sourceLang, group[0].targetLang),
+      inputLang: group[0].sourceLang,
+      outputLang: group[0].targetLang,
+      sentences: group.map((r) => ({
+        id: r.id,
+        input: r.sourceText,
+        output: r.translatedText,
+        translating: false,
+      })),
+    }));
+};
 
 const langOptions = LANGS.map((l) => ({
   value: l.value,
@@ -182,56 +210,29 @@ export default function TranslationPage() {
 
   const inputRefs = useRef<Record<string, { focus: () => void } | null>>({});
 
-  // Restore boxes from localStorage once (deferred so SSR flags no hydration mismatch).
+  // Boxes are server-derived only (buildBoxesFromServer). We deliberately do NOT restore them
+  // from localStorage at mount — doing so caused a "cache first, then real data" flash
+  // (boxes appeared, then disappeared ~1s later when the server response replaced them).
+  // Here we just purge the legacy shared-box keys once.
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length) {
-            const cleaned = parsed.map((b: LanguageBox) => ({
-              boxId: b.boxId || nextBoxId(),
-              inputLang: b.inputLang,
-              outputLang: b.outputLang,
-              sentences: Array.isArray(b.sentences) ? b.sentences : [],
-            }));
-            setBoxes(cleaned);
-          } else {
-            setBoxes([defaultBox()]);
-          }
-        } else {
-          setBoxes([defaultBox()]);
+    try {
+      for (const k of Object.keys(localStorage)) {
+        if (k === LEGACY_STORAGE_KEY || k.startsWith(`${LEGACY_STORAGE_KEY}.`)) {
+          localStorage.removeItem(k);
         }
-      } catch {
-        setBoxes([defaultBox()]);
       }
-      setHydrated(true);
-    }, 0);
-    return () => window.clearTimeout(timer);
+    } catch {
+      // storage unavailable — ignore
+    }
   }, []);
 
-  // Persist boxes to localStorage.
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(boxes));
-    } catch {
-      // storage full / unavailable — ignore
-    }
-  }, [boxes, hydrated]);
-
-  // Load history (management table) from backend.
+  // Load history (management table) + Learning Boxes from backend.
   useEffect(() => {
     (async () => {
-      try {
-        const res = await translationApi.myTranslations();
-        setHistories(res.data?.data || []);
-      } catch {
-        messageApi.error("Failed to load translation history");
-      } finally {
-        setLoading(false);
-      }
+      const ok = await loadHistories();
+      if (!ok) messageApi.error("Failed to load translation history");
+      setLoading(false);
+      setHydrated(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -241,7 +242,11 @@ export default function TranslationPage() {
     setBoxes((prev) => [...prev, defaultBox()]);
   };
 
-  const removeBox = (boxId: string) => {
+  const removeBox = async (boxId: string) => {
+    const target = boxes.find((b) => b.boxId === boxId);
+    const sentenceIds = (target?.sentences ?? [])
+      .map((s) => s.id)
+      .filter((id) => !id.startsWith(boxId));
     setBoxes((prev) => prev.filter((b) => b.boxId !== boxId));
     if (activeBoxId === boxId) setActiveBoxId(null);
     setPendingInputs((prev) => {
@@ -249,6 +254,13 @@ export default function TranslationPage() {
       delete next[boxId];
       return next;
     });
+    if (sentenceIds.length) {
+      try {
+        await translationApi.bulkDelete(sentenceIds);
+      } catch {
+        // server rows may already be gone — ignore
+      }
+    }
   };
 
   const patchBox = (boxId: string, patch: Partial<LanguageBox>) => {
@@ -337,12 +349,15 @@ export default function TranslationPage() {
     }
   };
 
-  const loadHistories = async () => {
+  const loadHistories = async (): Promise<boolean> => {
     try {
       const res = await translationApi.myTranslations();
-      setHistories(res.data?.data || []);
+      const rows = res.data?.data || [];
+      setHistories(rows);
+      setBoxes(buildBoxesFromServer(rows));
+      return true;
     } catch {
-      // silent refresh failure
+      return false;
     }
   };
 
@@ -566,13 +581,20 @@ export default function TranslationPage() {
     },
     {
       title: "Created",
-      dataIndex: "createdAt",
       key: "createdAt",
-      width: 160,
-      render: (date: string) => (
-        <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-          {new Date(date).toLocaleString()}
-        </Typography.Text>
+      width: 200,
+      render: (_: unknown, record: Translation) => (
+        <div>
+          <Typography.Text style={{ fontSize: 13, display: "block" }}>
+            {record.user?.fullname || record.user?.email || "—"}
+          </Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+            {record.user?.fullname ? record.user.email || "" : ""}
+          </Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+            {new Date(record.createdAt).toLocaleString()}
+          </Typography.Text>
+        </div>
       ),
     },
     {

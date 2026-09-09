@@ -46,6 +46,7 @@ export const authOptions: NextAuthOptions = {
           jwt: jwtValue,
           avatarUrl: data.user.avatarUrl || null,
           userType: data.user.userType || 'LOCAL',
+          createdBy: data.user.createdBy || null,
         };
       },
     }),
@@ -95,6 +96,7 @@ export const authOptions: NextAuthOptions = {
         token.jwt = (user as any).jwt;
         token.avatarUrl = (user as any).avatarUrl || null;
         token.userType = (user as any).userType || 'LOCAL';
+        token.createdBy = (user as any).createdBy || null;
       }
       if (trigger === 'update' && (session as any)?.avatarUrl) {
         token.avatarUrl = (session as any).avatarUrl;
@@ -109,6 +111,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).jwt = (token as any).jwt || "";
         (session.user as any).avatarUrl = (token as any).avatarUrl || null;
         (session.user as any).userType = (token as any).userType || 'LOCAL';
+        (session.user as any).createdBy = (token as any).createdBy || null;
       }
       return session;
     },

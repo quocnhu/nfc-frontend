@@ -133,6 +133,8 @@ export interface Translation {
   userId: string;
   sourceText: string;
   translatedText: string;
+  /** Pronunciation guide (pinyin / romaji / respelling). Null if none was produced. */
+  romanization?: string | null;
   sourceLang: string;
   targetLang: string;
   createdAt: string;

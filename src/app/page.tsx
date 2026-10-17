@@ -22,7 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { homepageApi, type PublicHomepageData } from "@/lib/api";
-import { SiDocker, SiKubernetes, SiTerraform, SiPrometheus, SiGrafana, SiArgo, SiCircleci, SiCisco, SiLinux, SiVmware, SiProxmox, SiGooglecloud, SiGnubash } from "react-icons/si";
+import { SiDocker, SiKubernetes, SiTerraform, SiPrometheus, SiGrafana, SiArgo, SiCircleci, SiJenkins, SiCisco, SiLinux, SiVmware, SiProxmox, SiGooglecloud, SiGnubash } from "react-icons/si";
 import { FaAws, FaMicrosoft } from "react-icons/fa6";
 
 const { Title, Paragraph, Text } = Typography;
@@ -257,7 +257,7 @@ export default function HomePage() {
             }}
           >
             <Title level={2} style={{ color: "#fff", margin: 0, fontSize: 28, fontWeight: 700 }}>
-              Nguyen Quoc Nhu
+              Nguyễn Quốc Nhu
             </Title>
             <Paragraph style={{ color: "#667eea", marginTop: 8, fontSize: 14, letterSpacing: 3, textTransform: "uppercase" }}>
               IT Professional &amp; Tour Guide
@@ -422,7 +422,7 @@ export default function HomePage() {
             </div>
           </div>
           <Text strong style={{ fontSize: 14, color: "#fff", letterSpacing: 0.5 }}>
-            Quoc Nhu
+            Nguyễn Quốc Nhu
           </Text>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
@@ -500,7 +500,7 @@ export default function HomePage() {
             />
           </div>
           <Title level={1} style={{ color: "#fff", margin: 0, fontSize: "clamp(28px, 8vw, 48px)", fontWeight: 800, letterSpacing: -1, textShadow: "0 2px 8px rgba(102,126,234,0.5), 0 4px 16px rgba(118,75,162,0.3)" }}>
-            Quoc Nhu
+            Nguyễn Quốc Nhu
           </Title>
           <Paragraph style={{ fontSize: "clamp(16px, 4vw, 20px)", color: "#aaa", marginTop: 8, marginBottom: 0 }}>
             IT Professional &amp; Tour Guide
@@ -705,47 +705,97 @@ export default function HomePage() {
                   <Text strong style={{ color: "#f0f0f0", fontSize: 16 }}>DevOps &amp; Automation</Text>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {[
+                  {([
                     { label: "Docker", color: "#2496ed", icon: <SiDocker /> },
                     { label: "Kubernetes", color: "#818cf8", icon: <SiKubernetes /> },
                     { label: "Terraform", color: "#7b42bc", icon: <SiTerraform /> },
                     { label: "Prometheus", color: "#ef4444", icon: <SiPrometheus /> },
                     { label: "Grafana", color: "#f97316", icon: <SiGrafana /> },
-                    { label: "ArgoCD", color: "#a78bfa", icon: <SiArgo /> },
-                    { label: "CI/CD", color: "#22c55e", icon: <SiCircleci /> },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 14,
-                        padding: "12px 16px",
-                        borderRadius: 12,
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.05)",
-                        transition: "background 0.3s, border-color 0.3s",
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = `${item.color}0a`; e.currentTarget.style.borderColor = `${item.color}33`; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}
-                    >
-<div
-                      style={{
-                        fontSize: 16,
-                        color: item.color,
-                        flexShrink: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        filter: `drop-shadow(0 0 6px ${item.color}55)`,
-                      }}
-                    >
-                      {item.icon}
-                    </div>
-                    <div>
-                      <Text strong style={{ color: "#e0e0e0", fontSize: 14 }}>{item.label}</Text>
-                    </div>
-                    </div>
-                  ))}
+                    { label: "CI/CD", color: "#22c55e", icon: <SiCircleci />, children: [
+                      { label: "ArgoCD", color: "#a78bfa", icon: <SiArgo /> },
+                      { label: "Jenkins", color: "#d33833", icon: <SiJenkins /> },
+                    ]},
+                  ] as Array<{ label: string; color: string; icon: React.ReactNode; children?: { label: string; color: string; icon: React.ReactNode }[] }>).map((item) =>
+                    item.children ? (
+                      <div key={`g-${item.label}`} style={{ borderRadius: 12, background: "rgba(255,255,255,0.03)", border: `1px solid ${item.color}22`, overflow: "hidden" }}>
+                        <div
+                          style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", transition: "background 0.3s" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = `${item.color}0a`; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <div
+                            style={{
+                              fontSize: 16,
+                              color: item.color,
+                              flexShrink: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              filter: `drop-shadow(0 0 6px ${item.color}55)`,
+                            }}
+                          >
+                            {item.icon}
+                          </div>
+                          <Text strong style={{ color: "#e0e0e0", fontSize: 14 }}>{item.label}</Text>
+                        </div>
+                        <div style={{ borderTop: `1px solid ${item.color}15` }}>
+                          {item.children.map((child) => (
+                            <div
+                              key={child.label}
+                              style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px 10px 44px", transition: "background 0.3s" }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = `${child.color}0a`; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  color: child.color,
+                                  flexShrink: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  filter: `drop-shadow(0 0 5px ${child.color}55)`,
+                                }}
+                              >
+                                {child.icon}
+                              </div>
+                              <Text style={{ color: "#c0c0c0", fontSize: 13 }}>{child.label}</Text>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        key={item.label}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 14,
+                          padding: "12px 16px",
+                          borderRadius: 12,
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.05)",
+                          transition: "background 0.3s, border-color 0.3s",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = `${item.color}0a`; e.currentTarget.style.borderColor = `${item.color}33`; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 16,
+                            color: item.color,
+                            flexShrink: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            filter: `drop-shadow(0 0 6px ${item.color}55)`,
+                          }}
+                        >
+                          {item.icon}
+                        </div>
+                        <div>
+                          <Text strong style={{ color: "#e0e0e0", fontSize: 14 }}>{item.label}</Text>
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
               </Card>
             </Col>
@@ -858,7 +908,7 @@ export default function HomePage() {
           <Button type="text" shape="circle" icon={<MailOutlined />} style={{ color: "#888", fontSize: 18 }} />
         </Space>
         <Paragraph style={{ color: "#555", margin: 0, fontSize: 13 }}>
-          &copy; 2026 Quoc Nhu &mdash; Built with passion for IT &amp; Travel
+          &copy; 2026 Nguyễn Quốc Nhu &mdash; Built with passion for IT &amp; Travel
         </Paragraph>
       </footer>
     </div>

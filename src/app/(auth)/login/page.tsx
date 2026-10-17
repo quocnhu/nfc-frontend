@@ -144,9 +144,6 @@ export default function LoginPage() {
           <Typography.Title level={3} style={{ margin: 0 }}>
             Welcome
           </Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-            Sign in to your NFC account
-          </Typography.Text>
         </div>
         {unverifiedEmail && (
           <Alert

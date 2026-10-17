@@ -29,6 +29,7 @@ import {
   BookOutlined,
   EditOutlined,
 } from "@ant-design/icons";
+import { useRouter } from "next/navigation";
 import { translationApi } from "@/lib/api";
 import { useTheme } from "@/components/providers/AntdProvider";
 import type { Translation } from "@/types";
@@ -48,8 +49,10 @@ const LANGS = [
   { value: "vi", label: "Vietnamese", country: "🇻🇳" },
   { value: "ja", label: "Japanese", country: "🇯🇵" },
   { value: "ko", label: "Korean", country: "🇰🇷" },
-  { value: "zh-CN", label: "Chinese (Simplified)", country: "🇨🇳" },
-  { value: "zh-TW", label: "Chinese (Traditional)", country: "🇹🇼" },
+  { value: "zh-CN", label: "Chinese (Mandarin) Simplified 普通话简体", country: "🇨🇳" },
+  // Traditional Chinese is a script, not a Mandarin variety — it spans both
+  // Taiwan Mandarin and Taiwanese Hokkien, so no "Mandarin" claim here.
+  { value: "zh-TW", label: "Chinese (Taiwan) Traditional 中文繁體", country: "🇹🇼" },
   { value: "fr", label: "French", country: "🇫🇷" },
   { value: "de", label: "German", country: "🇩🇪" },
   { value: "es", label: "Spanish", country: "🇪🇸" },
@@ -122,6 +125,8 @@ interface SentenceRow {
   id: string;
   input: string;
   output: string;
+  /** Pronunciation guide from the server (pinyin / romaji / respelling). */
+  romanization?: string | null;
   translating: boolean;
 }
 
@@ -169,6 +174,7 @@ const buildBoxesFromServer = (rows: Translation[]): LanguageBox[] => {
         id: r.id,
         input: r.sourceText,
         output: r.translatedText,
+        romanization: r.romanization ?? null,
         translating: false,
       })),
     }));
@@ -187,6 +193,7 @@ const getLangMeta = (code: string) => {
 
 export default function TranslationPage() {
   const { isDark } = useTheme();
+  const router = useRouter();
   const [messageApi, contextHolder] = message.useMessage();
 
   const [boxes, setBoxes] = useState<LanguageBox[]>([]);
@@ -199,7 +206,7 @@ export default function TranslationPage() {
 
   const [histories, setHistories] = useState<Translation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 25 });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [editTarget, setEditTarget] = useState<{
     id: string;
@@ -257,9 +264,13 @@ export default function TranslationPage() {
     if (sentenceIds.length) {
       try {
         await translationApi.bulkDelete(sentenceIds);
-      } catch {
-        // server rows may already be gone — ignore
+        messageApi.success(`Deleted ${sentenceIds.length} sentence(s)`);
+      } catch (err: unknown) {
+        messageApi.error(extractApiError(err, "Failed to delete this box's sentences"));
       }
+      // The sentences were rows in Manage Input / Output, so that table has to be
+      // refreshed too — otherwise the deleted rows stay on screen until a reload.
+      loadHistories();
     }
   };
 
@@ -576,6 +587,16 @@ export default function TranslationPage() {
           <Typography.Text style={{ fontSize: 13, display: "block" }}>
             {record.translatedText}
           </Typography.Text>
+          {/* Pronunciation guide, when one was produced for the target language.
+              Rows saved before romanization existed simply have none. */}
+          {record.romanization && (
+            <Typography.Text
+              type="secondary"
+              style={{ fontSize: 12, display: "block", fontStyle: "italic" }}
+            >
+              {record.romanization}
+            </Typography.Text>
+          )}
         </div>
       ),
     },
@@ -655,7 +676,7 @@ export default function TranslationPage() {
   return (
     <>
       {contextHolder}
-      <div style={{ maxWidth: 960, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1680, width: "100%", margin: "0 auto" }}>
         {/* ─── Header ─── */}
         <Card bordered={false} style={{ borderRadius: 16, background: cardBg, marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, padding: "8px 0 16px" }}>
@@ -668,14 +689,23 @@ export default function TranslationPage() {
                 One box per language pair. Click a box to open it and add sentences.
               </Typography.Text>
             </div>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={addBox}
-              style={{ background: "linear-gradient(135deg, #667eea, #764ba2)", border: "none" }}
-            >
-              Add a language box
-            </Button>
+            <Space wrap>
+              <Button
+                icon={<AudioOutlined />}
+                onClick={() => router.push("/translation/realtime")}
+                style={{ borderRadius: 10 }}
+              >
+                Realtime
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={addBox}
+                style={{ background: "linear-gradient(135deg, #667eea, #764ba2)", border: "none" }}
+              >
+                Add a language box
+              </Button>
+            </Space>
           </div>
 
           {/* ─── Compact language-pair cards ─── */}
@@ -685,8 +715,8 @@ export default function TranslationPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-                gap: 14,
+                gridTemplateColumns: "repeat(auto-fill, minmax(212px, 1fr))",
+                gap: 12,
               }}
             >
               {boxes.map((box) => {
@@ -866,6 +896,17 @@ export default function TranslationPage() {
                           <Typography.Text style={{ fontSize: 14, display: "block", marginTop: 4 }}>
                             {row.output || "\u00a0"}
                           </Typography.Text>
+                          {/* Pronunciation guide (pinyin for Chinese, romaji for
+                              Japanese, respelling for English). Absent for
+                              other languages, so nothing is drawn. */}
+                          {row.romanization && (
+                            <Typography.Text
+                              type="secondary"
+                              style={{ fontSize: 12.5, display: "block", fontStyle: "italic", marginTop: 2 }}
+                            >
+                              {row.romanization}
+                            </Typography.Text>
+                          )}
                         </div>
                         <Space size={4}>
                           <Tooltip title="Speak output">
@@ -1066,11 +1107,13 @@ export default function TranslationPage() {
             pagination={{
               current: pagination.current,
               pageSize: pagination.pageSize,
-              showSizeChanger: false,
+              showSizeChanger: true,
+              pageSizeOptions: ["10", "25", "50", "100"],
               onChange: (page, size) => setPagination({ current: page, pageSize: size }),
             }}
             locale={{ emptyText: <Empty description="No sentences yet — add some above" /> }}
             scroll={{ x: "max-content" }}
+            size="middle"
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => setSelectedRowKeys(keys),

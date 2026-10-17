@@ -263,6 +263,27 @@ export const translationApi = {
     api.delete<ApiResponse>(`/translation/${id}`),
   bulkDelete: (ids: string[]) =>
     api.post<ApiResponse>('/translation/bulk-delete', { ids }),
+  live: (data: { text: string; fromHint?: string[]; to: string[] }) =>
+    api.post<ApiResponse<{ outputs: Record<string, string>; errors: Record<string, string>; romanizations?: Record<string, string> }>>(
+      '/translation/live',
+      data,
+      { timeout: 30000 },
+    ),
+  romanize: (text: string, lang: string) =>
+    api.post<ApiResponse<{ romanization: string | null; lang: string }>>(
+      '/translation/romanize',
+      { text, lang },
+      { timeout: 20000 },
+    ),
+  stt: (audio: Blob, langHint?: string) => {
+    const fd = new FormData();
+    fd.append('audio', audio, 'clip.webm');
+    if (langHint) fd.append('langHint', langHint);
+    return api.post<ApiResponse<{ text: string; engine?: string }>>('/translation/stt', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    });
+  },
 };
 
 export const paymentApi = {

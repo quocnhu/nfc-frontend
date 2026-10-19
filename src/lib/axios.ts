@@ -3,7 +3,7 @@ import { notification } from "antd";
 
 const api = axios.create({
   baseURL: "/backend-api",
-  timeout: 0,
+  timeout: 15000,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
@@ -99,13 +99,15 @@ api.interceptors.response.use(
       }
     }
 
-    if (err.response) {
-      console.error(
-        `[API Error] ${err.config.method?.toUpperCase()} ${err.config.url} → ${err.response.status}:`,
-        err.response.data
-      );
-    } else {
-      console.error("[API Error] Network error:", err.message);
+    if (process.env.NODE_ENV !== "production") {
+      if (err.response) {
+        console.error(
+          `[API Error] ${err.config.method?.toUpperCase()} ${err.config.url} → ${err.response.status}:`,
+          err.response.data
+        );
+      } else {
+        console.error("[API Error] Network error:", err.message);
+      }
     }
     return Promise.reject(err);
   }

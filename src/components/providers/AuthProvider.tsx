@@ -2,6 +2,7 @@
 
 import { SessionProvider, useSession } from "next-auth/react";
 import { Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 
 function AuthLoader({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
@@ -17,10 +18,10 @@ function AuthLoader({ children }: { children: React.ReactNode }) {
         position: "fixed",
         top: 0,
         left: 0,
-        background: "#fff",
+        background: "#121220",
         zIndex: 9999,
       }}>
-        <Spin size="large" />
+        <Spin size="large" indicator={<LoadingOutlined style={{ color: "#e0e0e8", fontSize: 32 }} spin />} />
       </div>
     );
   }

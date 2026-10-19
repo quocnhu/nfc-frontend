@@ -2,8 +2,21 @@
 
 import React, { useEffect } from "react";
 import { Avatar, Typography, Flex } from "antd";
-import { motion } from "framer-motion";
-import * as Icons from "@ant-design/icons";
+import {
+  YoutubeOutlined,
+  TikTokOutlined,
+  FacebookOutlined,
+  InstagramOutlined,
+  LinkedinOutlined,
+  TwitterOutlined,
+  GithubOutlined,
+  GlobalOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  StarOutlined,
+  LinkOutlined,
+} from "@ant-design/icons";
+import { safeUrl } from "@/lib/safe-url";
 
 const { Title, Text } = Typography;
 
@@ -34,25 +47,25 @@ function RippleRing({ delay, color }: { delay: number; color: string }) {
   );
 }
 
+const ICON_MAP: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
+  youtube: YoutubeOutlined,
+  tiktok: TikTokOutlined,
+  facebook: FacebookOutlined,
+  instagram: InstagramOutlined,
+  linkedin: LinkedinOutlined,
+  twitter: TwitterOutlined,
+  github: GithubOutlined,
+  globe: GlobalOutlined,
+  mail: MailOutlined,
+  phone: PhoneOutlined,
+  star: StarOutlined,
+  link: LinkOutlined,
+  world: GlobalOutlined,
+};
+
 function getIcon(iconName: string): React.ReactNode {
-  const map: Record<string, string> = {
-    youtube: "YoutubeOutlined",
-    tiktok: "TikTokOutlined",
-    facebook: "FacebookOutlined",
-    instagram: "InstagramOutlined",
-    linkedin: "LinkedinOutlined",
-    twitter: "TwitterOutlined",
-    github: "GithubOutlined",
-    globe: "GlobalOutlined",
-    mail: "MailOutlined",
-    phone: "PhoneOutlined",
-    star: "StarOutlined",
-    link: "LinkOutlined",
-    world: "GlobalOutlined",
-  };
-  const name = map[iconName?.toLowerCase()] || "LinkOutlined";
-  const Icon = (Icons as any)[name];
-  return Icon ? <Icon /> : <Icons.LinkOutlined />;
+  const Icon = ICON_MAP[iconName?.toLowerCase()];
+  return Icon ? <Icon /> : <LinkOutlined />;
 }
 
 const CARD_COLORS = [
@@ -89,13 +102,15 @@ function WelcomeTicker({ text }: { text: string }) {
 }
 
 function openItem(url: string, itemName: string) {
+  const safe = safeUrl(url);
+  if (!safe) return;
   const lower = itemName.toLowerCase();
-  if (lower.includes("email") || url.startsWith("mailto:")) {
-    window.location.href = url.startsWith("mailto:") ? url : `mailto:${url}`;
-  } else if (lower.includes("phone") || url.startsWith("tel:")) {
-    window.location.href = url.startsWith("tel:") ? url : `tel:${url}`;
+  if (lower.includes("email") || safe.startsWith("mailto:")) {
+    window.location.href = safe.startsWith("mailto:") ? safe : `mailto:${safe}`;
+  } else if (lower.includes("phone") || safe.startsWith("tel:")) {
+    window.location.href = safe.startsWith("tel:") ? safe : `tel:${safe}`;
   } else {
-    window.open(url, "_blank");
+    window.open(safe, "_blank", "noopener,noreferrer");
   }
 }
 
@@ -139,6 +154,19 @@ export default function UserTemplate({ user, items }: Props) {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.05); }
         }
+        @keyframes fadeInUp {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .template-item {
+          transition: transform 0.2s ease;
+        }
+        .template-item:hover {
+          transform: scale(1.02);
+        }
+        .template-item:active {
+          transform: scale(0.98);
+        }
       `}</style>
       <div className="profile-bg">
         <div className="profile-ripple" />
@@ -148,15 +176,12 @@ export default function UserTemplate({ user, items }: Props) {
         <div className="profile-ripple" />
         <div className="profile-ripple" />
       </div>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 0.4, ease: "easeOut" }} 
-        style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1, marginTop: -35, display: "flex", flexDirection: "column", minHeight: "calc(100vh - 80px)", transform: "translateZ(0)" }}
+      <div
+        style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1, marginTop: -35, display: "flex", flexDirection: "column", minHeight: "calc(100vh - 80px)", transform: "translateZ(0)", animation: "fadeInUp 0.4s ease-out backwards" }}
       >
         <WelcomeTicker text={`Welcome to ${user.fullname}'s page`} />
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <motion.div
+          <div
             style={{ 
               position: "relative", 
               display: "inline-block", 
@@ -174,7 +199,7 @@ export default function UserTemplate({ user, items }: Props) {
               src={user.avatarUrl}
               style={{ border: `4px solid ${COLORS.accent}`, position: "relative", zIndex: 1, boxShadow: `0 4px 20px rgba(${COLORS.accentRgb}, 0.25)` }}
             />
-          </motion.div>
+          </div>
           <Title level={3} style={{ marginTop: 20, marginBottom: 4, color: COLORS.textPrimary, textShadow: "0 2px 10px rgba(79, 70, 229, 0.4), 0 0 20px rgba(255, 255, 255, 0.2)" }}>{user.fullname}</Title>
           {user.role && (
             <div style={{ marginBottom: 8 }}>
@@ -199,14 +224,10 @@ export default function UserTemplate({ user, items }: Props) {
           {items.map((item, i) => {
             const c = CARD_COLORS[i % CARD_COLORS.length];
             return (
-              <motion.div
+              <div
                 key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 + i * 0.08, duration: 0.3, ease: "easeOut" }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                style={{ willChange: "transform, opacity" }}
+                className="template-item"
+                style={{ willChange: "transform, opacity", animation: `fadeInUp 0.3s ease-out ${(0.2 + i * 0.08).toFixed(2)}s backwards` }}
               >
                 <div
                   className="profile-item"
@@ -255,7 +276,7 @@ export default function UserTemplate({ user, items }: Props) {
                   </div>
                   <Text style={{ color: COLORS.textPrimary, fontSize: 15, fontWeight: 600, letterSpacing: 0.3 }}>{item.itemName}</Text>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </Flex>
@@ -265,7 +286,7 @@ export default function UserTemplate({ user, items }: Props) {
             Designed by <span style={{ color: COLORS.accent, fontWeight: 600 }}>Nguyen Quoc Nhu</span> - <span style={{ color: COLORS.textSecondary, fontWeight: 500 }}>NFC Tap</span>
           </Text>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

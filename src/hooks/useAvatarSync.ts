@@ -15,11 +15,12 @@ import { useAvatar } from "@/components/providers/AvatarProvider";
 export function useAvatarSync() {
   const { data: session, update } = useSession();
   const currentUserId = (session?.user as any)?.id as string | undefined;
-  const { setAvatarUrl } = useAvatar();
+  const { setAvatarUrl, refresh } = useAvatar();
 
   /** Push new avatar to AvatarContext (always) and NextAuth session (best-effort) */
   const syncAvatar = async (avatarUrl: string) => {
     setAvatarUrl(avatarUrl);
+    refresh();
     try {
       await update({ avatarUrl });
     } catch {

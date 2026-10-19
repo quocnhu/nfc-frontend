@@ -120,8 +120,8 @@ export function DashboardShell({
   const { isDark, toggle } = useTheme();
   const { avatarUrl } = useAvatar();
 
-  // Live access snapshot from the backend (refreshes on navigation so role/permission
-  // changes take effect immediately instead of waiting for the 7-day session expiry).
+  // Live access snapshot from the backend (refreshes when the session changes so
+  // role/permission changes take effect instead of waiting for the 7-day session expiry).
   const [liveAccess, setLiveAccess] = useState<{
     role?: string;
     permissions?: string[];
@@ -143,7 +143,10 @@ export function DashboardShell({
         setPaymentStatus(res.data?.data || null);
       }).catch(() => {});
     }
-  }, [session, pathname]);
+  }, [session]);
+
+  const [permissionsError, setPermissionsError] = useState(false);
+  const [permissionsRetry, setPermissionsRetry] = useState(0);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -159,20 +162,17 @@ export function DashboardShell({
           createdBy: d?.user?.createdBy || null,
           needsUpgrade: d?.needsUpgrade,
         });
+        setPermissionsError(false);
       })
-.catch(() => {
+      .catch(() => {
         if (!active) return;
-        setLiveAccess({
-          role: (session?.user as any)?.role as string,
-          permissions: ((session?.user as any)?.permissions as string[]) || [],
-          createdBy: null,
-          needsUpgrade: undefined,
-        });
+        setLiveAccess(null);
+        setPermissionsError(true);
       });
     return () => {
       active = false;
     };
-  }, [pathname, session]);
+  }, [session, permissionsRetry]);
 
   const user = session?.user;
 
@@ -302,7 +302,25 @@ export function DashboardShell({
             }
           `}</style>
         </div>
-        {menuReady ? (
+        {permissionsError ? (
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "0 12px",
+            }}
+          >
+            <Button
+              size="small"
+              onClick={() => setPermissionsRetry((r) => r + 1)}
+              style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}
+            >
+              Failed to load permissions — Retry
+            </Button>
+          </div>
+        ) : menuReady ? (
           <Menu
             theme="dark"
             mode="inline"

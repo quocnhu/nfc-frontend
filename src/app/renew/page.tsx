@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, Typography, Button, Spin, Result, Space, Tag, Divider, Row, Col, message } from "antd";
 import { DollarOutlined, CheckCircleOutlined, ClockCircleOutlined, CrownOutlined, ThunderboltOutlined, RocketOutlined, LockOutlined, StopOutlined } from "@ant-design/icons";
 import { paymentApi } from "@/lib/api";
+import { extractApiError } from "@/lib/api-error";
 import { useSession } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
 import type { Plan, PaymentStatus } from "@/types";
@@ -52,6 +53,8 @@ export default function RenewPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [processing, setProcessing] = useState<string | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -65,11 +68,14 @@ export default function RenewPage() {
         paymentApi.plans(),
         paymentApi.status(),
       ]).then(([plansRes, statusRes]) => {
+        setLoadError(null);
         setPlans(plansRes.data?.data || []);
         setPaymentStatus(statusRes.data?.data || null);
-      }).catch(() => {}).finally(() => setLoading(false));
+      }).catch((err) => {
+        setLoadError(extractApiError(err, "Failed to load plans and payment status"));
+      }).finally(() => setLoading(false));
     }
-  }, [status, router]);
+  }, [status, router, reloadKey]);
 
   const handleSelectPlan = async (plan: Plan) => {
     try {
@@ -96,6 +102,32 @@ export default function RenewPage() {
     return (
       <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: "#f0f2f5" }}>
         <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: isDark ? "#0a0a1e" : "#f0f2f5", padding: 24 }}>
+        <Card style={{ maxWidth: 500, width: "100%" }}>
+          <Result
+            status="error"
+            title="Unable to load plans"
+            subTitle={loadError}
+            extra={
+              <Button
+                type="primary"
+                onClick={() => {
+                  setLoadError(null);
+                  setLoading(true);
+                  setReloadKey((k) => k + 1);
+                }}
+              >
+                Retry
+              </Button>
+            }
+          />
+        </Card>
       </div>
     );
   }

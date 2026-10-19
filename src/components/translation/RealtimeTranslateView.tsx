@@ -135,8 +135,16 @@ function Reveal({ text, onDone }: { text: string; onDone: () => void }) {
 
 export default function RealtimeTranslateModal({
   onClose,
+  headerExtra,
 }: {
   onClose: () => void;
+  /**
+   * Rendered in the header strip, left of the close button. Lets the owning
+   * dashboard inject controls without the guest-facing /live route showing
+   * them. Injected here rather than positioned over the view, which is a
+   * fixed full-screen layer at a much higher z-index.
+   */
+  headerExtra?: React.ReactNode;
 }) {
   const { isDark } = useTheme();
   const live = useLiveTranslate();
@@ -531,7 +539,11 @@ export default function RealtimeTranslateModal({
             {demo ? "DEMO MODE" : live.connected ? "SERVER CONNECTED" : "Connecting…"}
           </span>
 
-          <Tooltip title="Close (Esc)">
+          {/* Owner-only extras (e.g. the share button on the dashboard route). The public
+            /live page omits this, so a guest never sees sharing controls. */}
+            {headerExtra}
+
+            <Tooltip title="Close (Esc)">
             <button
               onClick={onClose}
               aria-label="Close"

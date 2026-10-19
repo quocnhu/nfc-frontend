@@ -16,18 +16,26 @@ const AvatarContext = createContext<AvatarCtx>({
   refresh: () => {},
 });
 
-function cacheBust(url: string | null): string | null {
+/**
+ * Stable cache key: keep an existing query as-is, otherwise key on the
+ * record's updatedAt so the URL only changes when the avatar actually changes.
+ */
+function withVersion(url: string | null, updatedAt?: string | null): string | null {
   if (!url) return null;
-  const base = url.split("?")[0];
-  return `${base}?t=${Date.now()}`;
+  if (url.includes("?")) return url;
+  if (!updatedAt) return url;
+  return `${url}?v=${encodeURIComponent(updatedAt)}`;
 }
 
 export function AvatarProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id as string | undefined;
 
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(
-    cacheBust((session?.user as any)?.avatarUrl || null),
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() =>
+    withVersion(
+      (session?.user as any)?.avatarUrl || null,
+      (session?.user as any)?.updatedAt || null,
+    ),
   );
 
   const refresh = useCallback(() => {
@@ -35,8 +43,8 @@ export function AvatarProvider({ children }: { children: React.ReactNode }) {
     userApi
       .getMe()
       .then((res) => {
-        const url = res.data?.data?.avatarUrl || null;
-        setAvatarUrl(cacheBust(url));
+        const user = res.data?.data;
+        setAvatarUrl(withVersion(user?.avatarUrl || null, user?.updatedAt));
       })
       .catch(() => {});
   }, [userId]);
@@ -46,7 +54,7 @@ export function AvatarProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const setAvatar = useCallback((url: string | null) => {
-    setAvatarUrl(cacheBust(url));
+    setAvatarUrl(url);
   }, []);
 
   return (

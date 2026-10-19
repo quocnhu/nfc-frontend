@@ -25,6 +25,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/providers/AntdProvider";
 import { userdataApi } from "@/lib/api";
+import { extractApiError } from "@/lib/api-error";
 import { useAvatarSync } from "@/hooks/useAvatarSync";
 import { useAvatar } from "@/components/providers/AvatarProvider";
 import { getCroppedImg } from "@/lib/cropImage";
@@ -114,7 +115,10 @@ export default function ProfilePage() {
         userdataApi
           .listAdminAvatars((user as any).id)
           .then((r) => setAvatarHistory(r.data?.data || []))
-          .catch(() => {});
+          .catch((err) => {
+            console.error("Failed to refresh avatar history:", err);
+            messageApi.error(extractApiError(err, "Failed to refresh avatar history"));
+          });
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || "Upload failed";

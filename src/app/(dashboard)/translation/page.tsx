@@ -33,15 +33,11 @@ import { useRouter } from "next/navigation";
 import { translationApi } from "@/lib/api";
 import { useTheme } from "@/components/providers/AntdProvider";
 import type { Translation } from "@/types";
+import { extractApiError } from "@/lib/api-error";
+import ShareBoxButton from "@/components/translation/ShareBoxButton";
 import type { ColumnsType } from "antd/es/table";
 
 const { TextArea } = Input;
-
-function extractApiError(err: unknown, fallback: string): string {
-  const data = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data;
-  const msg = data?.message;
-  return Array.isArray(msg) ? msg.join(", ") : msg || fallback;
-}
 
 const LANGS = [
   { value: "en", label: "English (UK)", country: "🇬🇧" },
@@ -857,6 +853,12 @@ export default function TranslationPage() {
                 <Tag color="purple" style={{ marginLeft: 4 }}>
                   {activeBox.sentences.length} sentence{activeBox.sentences.length === 1 ? "" : "s"}
                 </Tag>
+                <span style={{ marginLeft: 8 }}>
+                  <ShareBoxButton
+                    inputLang={activeBox.inputLang}
+                    outputLang={activeBox.outputLang}
+                  />
+                </span>
               </div>
             ) : null
           }

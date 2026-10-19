@@ -14,6 +14,9 @@ import type {
   UploadedFile,
   QRCode,
   Translation,
+  SharedBox,
+  SharedBoxMeta,
+  SharedSentence,
   SuspiciousActivity,
   Payment,
   PaymentStatus,
@@ -141,7 +144,6 @@ export const uploadApi = {
     return api.post<ApiResponse<{ uploaded: { url: string; filename: string; size: number; folder: string }[]; errors: string[] }>>(
       `/upload/${folder}`,
       form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
   },
   listFiles: (folder: string) =>
@@ -162,7 +164,6 @@ export const userdataApi = {
     const form = new FormData();
     form.append('file', file);
     return api.post<ApiResponse<{ avatarUrl: string }>>('/upload/userdata/avatar', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (e) => {
         if (onProgress && e.total) {
           onProgress(Math.round((e.loaded * 100) / e.total));
@@ -178,7 +179,6 @@ export const userdataApi = {
       '/upload/userdata/files',
       form,
       {
-        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           if (onProgress && e.total) {
             onProgress(Math.round((e.loaded * 100) / e.total));
@@ -198,7 +198,6 @@ export const userdataApi = {
     form.append('userId', userId);
     form.append('file', file);
     return api.post<ApiResponse<{ avatarUrl: string }>>('/upload/userdata/avatar/upload', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (e) => {
         if (onProgress && e.total) {
           onProgress(Math.round((e.loaded * 100) / e.total));
@@ -245,6 +244,28 @@ export const qrApi = {
     api.post<ApiResponse>('/qr/bulk-delete', { ids }),
 };
 
+export const sharedBoxApi = {
+  /** Boxes the signed-in user owns. */
+  list: () => api.get<ApiResponse<SharedBox[]>>("/shared-boxes"),
+  /** Open (or re-open) a box for a language pair. Idempotent per pair. */
+  create: (data: { inputLang: string; outputLang: string }) =>
+    api.post<ApiResponse<{ id: string; token: string; inputLang: string; outputLang: string }>>(
+      "/shared-boxes",
+      data,
+    ),
+  /** Revoke a link. Sentences are kept; the URL stops working. */
+  disable: (id: string) => api.delete<ApiResponse>(`/shared-boxes/${id}`),
+
+  /** Public: read a box. The token in the URL is the capability. */
+  readPublic: (token: string) =>
+    api.get<ApiResponse<SharedBoxMeta>>(`/shared-boxes/public/${token}`),
+  /** Public: add a sentence. Authenticated callers who own the box are flagged as owner. */
+  addSentence: (token: string, sourceText: string) =>
+    api.post<ApiResponse<SharedSentence>>(`/shared-boxes/public/${token}/sentences`, {
+      sourceText,
+    }),
+};
+
 export const translationApi = {
   translate: (data: { sourceText: string; sourceLang: string; targetLang: string }) =>
     api.post<ApiResponse<Translation>>('/translation', data),
@@ -280,7 +301,6 @@ export const translationApi = {
     fd.append('audio', audio, 'clip.webm');
     if (langHint) fd.append('langHint', langHint);
     return api.post<ApiResponse<{ text: string; engine?: string }>>('/translation/stt', fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
     });
   },
@@ -362,7 +382,6 @@ export const homepageApi = {
     return api.post<ApiResponse<{ url: string; filename: string; path: string; size: number; folder: string }>>(
       '/upload/homepage/upload',
       form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
   },
   delete: (folder: string, filename: string) =>

@@ -1,5 +1,3 @@
-"use client";
-
 import { Typography, Breadcrumb } from "antd";
 
 interface Props {

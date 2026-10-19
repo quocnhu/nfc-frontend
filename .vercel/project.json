@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_FSMB9TYRPX2Sbi9ybdTTFMDM1hCf",
+  "orgId": "team_exbD9DSHdYR8rmRc7MDynMrp",
+  "projectName": "nfc-tap-frontend",
+  "settings": {
+    "createdAt": 1785348851069,
+    "framework": "nextjs",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}

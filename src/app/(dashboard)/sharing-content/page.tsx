@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { Table, Button, Modal, Form, Input, Space, message, Popconfirm, Typography, AutoComplete, Select, Tooltip, Segmented } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, UserOutlined, YoutubeOutlined, TikTokOutlined, FacebookOutlined, InstagramOutlined, LinkedinOutlined, TwitterOutlined, GithubOutlined, GlobalOutlined, MailOutlined, PhoneOutlined, StarOutlined, LinkOutlined as LinkIconOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, YoutubeOutlined, TikTokOutlined, FacebookOutlined, InstagramOutlined, LinkedinOutlined, TwitterOutlined, GithubOutlined, GlobalOutlined, MailOutlined, PhoneOutlined, StarOutlined, LinkOutlined as LinkIconOutlined } from "@ant-design/icons";
 import { sharingApi, dashboardApi, userApi, uploadApi } from "@/lib/api";
+import { safeUrl } from "@/lib/safe-url";
 import { formatDate } from "@/utils/helpers";
 import type { SharingContent, User } from "@/types";
 import PhoneInput from "@/components/PhoneInput";
@@ -102,7 +103,10 @@ export default function SharingContentPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load mirrors existing app pattern
+    load();
+  }, []);
 
   const handleCreate = () => {
     setEditingItem(null);
@@ -176,12 +180,19 @@ export default function SharingContentPage() {
       } else if (urlType === "email") {
         formattedUrl = `mailto:${values.url}`;
       }
+
+      const validatedUrl = safeUrl(formattedUrl);
+      if (!validatedUrl) {
+        messageApi.error("Invalid URL scheme. Only http(s), mailto and tel are allowed.");
+        return;
+      }
+      formattedUrl = validatedUrl;
       
       if (editingItem) {
         await sharingApi.update({ id: editingItem.id, itemName: values.itemName, url: formattedUrl, icon: values.icon });
         messageApi.success("Updated");
       } else {
-        const payload: any = { itemName: values.itemName, url: formattedUrl, icon: values.icon };
+        const payload: { itemName: string; url: string; icon: string; targetUserId?: string } = { itemName: values.itemName, url: formattedUrl, icon: values.icon };
         if (values.targetUserId) payload.targetUserId = values.targetUserId;
         await sharingApi.create(payload);
         messageApi.success("Created");
@@ -196,10 +207,10 @@ export default function SharingContentPage() {
   };
 
   const columns = [
-    { title: "#", key: "index", width: 60, render: (_: any, __: any, i: number) => (pagination.current - 1) * pagination.pageSize + i + 1 },
+    { title: "#", key: "index", width: 60, render: (_: unknown, __: unknown, i: number) => (pagination.current - 1) * pagination.pageSize + i + 1 },
     { title: "Item Name", dataIndex: "itemName", key: "itemName", filterSearch: true,
       filters: [...new Set(items.map((i) => i.itemName))].map((n) => ({ text: n, value: n })),
-      onFilter: (value: any, record: SharingContent) => record.itemName.includes(value),
+      onFilter: (value: React.Key | boolean | undefined, record: SharingContent) => record.itemName.includes(String(value)),
     },
     {
       title: "URL",
@@ -208,7 +219,7 @@ export default function SharingContentPage() {
       width: 250,
       filterSearch: true,
       filters: items.map((i) => ({ text: i.url, value: i.url })),
-      onFilter: (value: any, record: SharingContent) => record.url === value,
+      onFilter: (value: React.Key | boolean | undefined, record: SharingContent) => record.url === value,
       render: (url: string) => {
         const getIcon = () => {
           if (url.startsWith("tel:")) return <PhoneOutlined style={{ color: "#34a853" }} />;
@@ -216,18 +227,25 @@ export default function SharingContentPage() {
           return <LinkOutlined style={{ color: "#4f46e5" }} />;
         };
         const displayUrl = url.startsWith("tel:") ? url.substring(4) : url.startsWith("mailto:") ? url.substring(7) : url;
+        const safeHref = safeUrl(url);
         return (
           <Tooltip title={url}>
-            <Typography.Link href={url} target="_blank" style={{ maxWidth: 220 }}>
-              {getIcon()} <Typography.Text ellipsis style={{ maxWidth: 180 }}>{displayUrl}</Typography.Text>
-            </Typography.Link>
+            {safeHref ? (
+              <Typography.Link href={safeHref} target="_blank" rel="noopener noreferrer" style={{ maxWidth: 220 }}>
+                {getIcon()} <Typography.Text ellipsis style={{ maxWidth: 180 }}>{displayUrl}</Typography.Text>
+              </Typography.Link>
+            ) : (
+              <span style={{ maxWidth: 220, display: "inline-block" }}>
+                {getIcon()} <Typography.Text ellipsis style={{ maxWidth: 180 }}>{displayUrl}</Typography.Text>
+              </span>
+            )}
           </Tooltip>
         );
       },
     },
     { title: "Icon", dataIndex: "icon", key: "icon", filterSearch: true,
       filters: [...new Set(items.map((i) => i.icon))].map((n) => ({ text: n, value: n })),
-      onFilter: (value: any, record: SharingContent) => record.icon === value,
+      onFilter: (value: React.Key | boolean | undefined, record: SharingContent) => record.icon === value,
       render: (icon: string) => {
         const iconItem = icons.find(i => i.name.replace(/\.[^.]+$/, "") === icon);
         return (
@@ -243,7 +261,7 @@ export default function SharingContentPage() {
     },
     { title: "CreatedDate", dataIndex: "createdAt", key: "createdAt",
       filters: [...new Set(items.map((i) => formatDate(i.createdAt)))].map((d) => ({ text: d, value: d })),
-      onFilter: (value: any, record: SharingContent) => formatDate(record.createdAt) === value,
+      onFilter: (value: React.Key | boolean | undefined, record: SharingContent) => formatDate(record.createdAt) === value,
       render: formatDate,
     },
     {
@@ -251,15 +269,15 @@ export default function SharingContentPage() {
       key: "creator",
       filterSearch: true,
       filters: [...new Set(items.map((i) => i.creator?.fullname || i.user?.fullname || "-"))].map((n) => ({ text: n, value: n })),
-      onFilter: (value: any, record: SharingContent) => (record.creator?.fullname || record.user?.fullname || "-") === value,
-      render: (_: any, record: SharingContent) => (
+      onFilter: (value: React.Key | boolean | undefined, record: SharingContent) => (record.creator?.fullname || record.user?.fullname || "-") === value,
+      render: (_: unknown, record: SharingContent) => (
         <span>{record.creator?.fullname || record.user?.fullname || "-"}</span>
       ),
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_: any, record: SharingContent) => {
+      render: (_: unknown, record: SharingContent) => {
         const isOwner = record.userId === currentUserId;
         const canEdit = hasReadAll || (canUpdate && isOwner);
         const canRemove = hasReadAll || (canDelete && isOwner);

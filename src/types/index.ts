@@ -141,6 +141,34 @@ export interface Translation {
   user?: { id: string; fullname: string; email: string };
 }
 
+/** One line in a learning box that has been opened to the public. */
+export interface SharedSentence {
+  id: string;
+  sourceText: string;
+  translatedText: string;
+  romanization?: string | null;
+  /** True when written by the box owner, false for a visitor's contribution. */
+  isOwner: boolean;
+  createdAt: string;
+}
+
+export interface SharedBoxMeta {
+  inputLang: string;
+  outputLang: string;
+  sentences: SharedSentence[];
+}
+
+/** A box the signed-in user owns. */
+export interface SharedBox {
+  id: string;
+  token: string;
+  inputLang: string;
+  outputLang: string;
+  isActive: boolean;
+  createdAt: string;
+  _count?: { sentences: number };
+}
+
 export interface SuspiciousAlert {
   type: 'brute_force_ip' | 'brute_force_account' | 'high_failure_rate' | 'permission_change' | 'deletion';
   severity: 'high' | 'medium' | 'low';

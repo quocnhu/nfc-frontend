@@ -2,8 +2,21 @@
 
 import React, { useEffect } from "react";
 import { Avatar, Typography, Flex } from "antd";
-import { motion } from "framer-motion";
-import * as Icons from "@ant-design/icons";
+import {
+  YoutubeOutlined,
+  TikTokOutlined,
+  FacebookOutlined,
+  InstagramOutlined,
+  LinkedinOutlined,
+  TwitterOutlined,
+  GithubOutlined,
+  GlobalOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  StarOutlined,
+  LinkOutlined,
+} from "@ant-design/icons";
+import { safeUrl } from "@/lib/safe-url";
 
 const { Title, Text } = Typography;
 
@@ -31,7 +44,7 @@ function RippleRing({ delay }: { delay: number }) {
   );
 }
 
-function SpotlightBeam({ color, originX, bottom, swing, duration, delay }: {
+function SpotlightBeam({ color, originX, bottom, duration, delay }: {
   color: string; originX: string; bottom?: boolean; swing: number; duration: number; delay: number;
 }) {
   return (
@@ -96,35 +109,37 @@ function WelcomeTicker({ text }: { text: string }) {
   );
 }
 
+const ICON_MAP: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
+  youtube: YoutubeOutlined,
+  tiktok: TikTokOutlined,
+  facebook: FacebookOutlined,
+  instagram: InstagramOutlined,
+  linkedin: LinkedinOutlined,
+  twitter: TwitterOutlined,
+  github: GithubOutlined,
+  globe: GlobalOutlined,
+  mail: MailOutlined,
+  phone: PhoneOutlined,
+  star: StarOutlined,
+  link: LinkOutlined,
+  world: GlobalOutlined,
+};
+
 function getIcon(iconName: string): React.ReactNode {
-  const map: Record<string, string> = {
-    youtube: "YoutubeOutlined",
-    tiktok: "TikTokOutlined",
-    facebook: "FacebookOutlined",
-    instagram: "InstagramOutlined",
-    linkedin: "LinkedinOutlined",
-    twitter: "TwitterOutlined",
-    github: "GithubOutlined",
-    globe: "GlobalOutlined",
-    mail: "MailOutlined",
-    phone: "PhoneOutlined",
-    star: "StarOutlined",
-    link: "LinkOutlined",
-    world: "GlobalOutlined",
-  };
-  const name = map[iconName?.toLowerCase()] || "LinkOutlined";
-  const Icon = (Icons as any)[name];
-  return Icon ? <Icon /> : <Icons.LinkOutlined />;
+  const Icon = ICON_MAP[iconName?.toLowerCase()];
+  return Icon ? <Icon /> : <LinkOutlined />;
 }
 
 function openItem(url: string, itemName: string) {
+  const safe = safeUrl(url);
+  if (!safe) return;
   const lower = itemName.toLowerCase();
-  if (lower.includes("email") || url.startsWith("mailto:")) {
-    window.location.href = url.startsWith("mailto:") ? url : `mailto:${url}`;
-  } else if (lower.includes("phone") || url.startsWith("tel:")) {
-    window.location.href = url.startsWith("tel:") ? url : `tel:${url}`;
+  if (lower.includes("email") || safe.startsWith("mailto:")) {
+    window.location.href = safe.startsWith("mailto:") ? safe : `mailto:${safe}`;
+  } else if (lower.includes("phone") || safe.startsWith("tel:")) {
+    window.location.href = safe.startsWith("tel:") ? safe : `tel:${safe}`;
   } else {
-    window.open(url, "_blank");
+    window.open(safe, "_blank", "noopener,noreferrer");
   }
 }
 
@@ -186,6 +201,23 @@ export default function VipTemplate({ user, items }: Props) {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.05); }
         }
+        @keyframes fadeInUp {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        .template-item {
+          transition: transform 0.2s ease;
+        }
+        .template-item:hover {
+          transform: scale(1.02);
+        }
+        .template-item:active {
+          transform: scale(0.98);
+        }
       `}</style>
       <TheaterLights />
 
@@ -198,11 +230,8 @@ export default function VipTemplate({ user, items }: Props) {
       <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "flex-start", position: "relative", zIndex: 1, padding: "0 20px" }}>
         <div style={{ width: "100%", maxWidth: 400 }}>
           {/* Avatar Section */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            style={{ textAlign: "center", paddingTop: 10, paddingBottom: 28, transform: "translateZ(0)" }}
+          <div
+            style={{ textAlign: "center", paddingTop: 10, paddingBottom: 28, transform: "translateZ(0)", animation: "fadeIn 0.4s ease-out backwards" }}
           >
             <div
               style={{
@@ -222,7 +251,7 @@ export default function VipTemplate({ user, items }: Props) {
               />
             </div>
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}>
+            <div style={{ animation: "fadeInUp 0.5s ease-out 0.3s backwards" }}>
               <Title level={2} style={{ color: COLORS.textPrimary, marginTop: 22, marginBottom: 4, fontWeight: 700, textShadow: "0 2px 15px rgba(255, 176, 32, 0.5), 0 0 25px rgba(255, 255, 255, 0.3)" }}>{user.fullname}</Title>
               {user.role && (
                 <div style={{ marginBottom: 8 }}>
@@ -241,22 +270,18 @@ export default function VipTemplate({ user, items }: Props) {
                   </span>
                 </div>
               )}
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
           {/* Items */}
           <Flex vertical gap={10}>
             {items.map((item, i) => {
               const c = CARD_COLORS[i % CARD_COLORS.length];
               return (
-                <motion.div
+                <div
                   key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.08, duration: 0.3, ease: "easeOut" }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  style={{ willChange: "transform, opacity" }}
+                  className="template-item"
+                  style={{ willChange: "transform, opacity", animation: `fadeInUp 0.3s ease-out ${(0.3 + i * 0.08).toFixed(2)}s backwards` }}
                 >
                   <div
                     onClick={() => openItem(item.url, item.itemName)}
@@ -306,7 +331,7 @@ export default function VipTemplate({ user, items }: Props) {
                       <Text style={{ color: COLORS.textPrimary, fontSize: 15, fontWeight: 600, letterSpacing: 0.3 }}>{item.itemName}</Text>
                     </Flex>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
           </Flex>
@@ -314,16 +339,13 @@ export default function VipTemplate({ user, items }: Props) {
       </div>
 
       {/* Bottom: Footer */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6, duration: 0.5, ease: "easeOut" }}
-        style={{ textAlign: "center", padding: "20px 0 12px", position: "relative", zIndex: 1 }}
+      <div
+        style={{ textAlign: "center", padding: "20px 0 12px", position: "relative", zIndex: 1, animation: "fadeIn 0.5s ease-out 0.6s backwards" }}
       >
         <Text style={{ color: COLORS.textTertiary, fontSize: 12, letterSpacing: 0.3, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
           Designed by <span style={{ color: COLORS.textSecondary, fontWeight: 600 }}>Nguyen Quoc Nhu</span> - <span style={{ color: `rgb(${COLORS.accent})`, fontWeight: 500 }}>NFC Tap</span>
         </Text>
-      </motion.div>
+      </div>
     </div>
   );
 }

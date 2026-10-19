@@ -3,7 +3,6 @@ import "./globals.css";
 import { AntdProvider } from "@/components/providers/AntdProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { AvatarProvider } from "@/components/providers/AvatarProvider";
-import { PayPalProvider } from "@/components/providers/PayPalProvider";
 
 export const metadata: Metadata = {
   title: "QuocNhu's Website",
@@ -20,9 +19,7 @@ export default function RootLayout({
       <body>
         <AntdProvider>
           <AuthProvider>
-            <PayPalProvider>
-              <AvatarProvider>{children}</AvatarProvider>
-            </PayPalProvider>
+            <AvatarProvider>{children}</AvatarProvider>
           </AuthProvider>
         </AntdProvider>
       </body>

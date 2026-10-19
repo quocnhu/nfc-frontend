@@ -1,7 +1,7 @@
 "use client";
 
 import { Form, Input, Button, Card, Typography, message, Alert, Spin, Divider } from "antd";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MailOutlined, LockOutlined } from "@ant-design/icons";
 import Link from "next/link";
@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [cooldown, setCooldown] = useState(0);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval>>(null);
+  const cooldownActive = cooldown > 0;
 
   useEffect(() => {
     if (status === "authenticated" && session) {
@@ -31,22 +31,15 @@ export default function LoginPage() {
       .catch(() => setRegistrationEnabled(true));
   }, []);
 
+  // Single interval for the whole cooldown: start once when it begins,
+  // clear once it ends — ticks read the current value via functional update.
   useEffect(() => {
-    if (cooldown > 0) {
-      timerRef.current = setInterval(() => {
-        setCooldown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current!);
-    };
-  }, [cooldown]);
+    if (!cooldownActive) return;
+    const id = setInterval(() => {
+      setCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cooldownActive]);
 
   const onFinish = useCallback(async (values: { email: string; password: string }) => {
     if (cooldown > 0) return;
@@ -59,7 +52,12 @@ export default function LoginPage() {
         body: JSON.stringify(values),
       });
 
-      const data = await res.json();
+      let data: { error?: string; retryAfter?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
 
       if (res.status === 429) {
         const retryAfter = parseInt(data.retryAfter || "30", 10);
@@ -70,6 +68,11 @@ export default function LoginPage() {
       }
 
       if (!res.ok) {
+        if (res.status >= 500) {
+          messageApi.error("Server error — please try again later.");
+          setLoading(false);
+          return;
+        }
         const errorMsg = data.error || "Login failed";
         if (errorMsg.toLowerCase().includes("verify your email")) {
           setUnverifiedEmail(values.email);
@@ -83,7 +86,7 @@ export default function LoginPage() {
 
       window.location.href = "/profile";
     } catch {
-      messageApi.error("Invalid email or password");
+      messageApi.error("Unable to reach the server. Please check your connection and try again.");
       setLoading(false);
     }
   }, [cooldown, messageApi]);

@@ -8,16 +8,16 @@ declare module "next-auth" {
       permissions: string[];
       userType?: string;
       avatarUrl?: string | null;
+      createdBy?: string | null;
     } & DefaultSession["user"];
-    jwt?: string;
   }
 
   interface User {
     role: string;
     permissions: string[];
-    jwt: string;
     userType?: string;
     avatarUrl?: string | null;
+    createdBy?: string | null;
   }
 }
 
@@ -26,8 +26,8 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     permissions: string[];
-    jwt?: string;
     userType?: string;
     avatarUrl?: string | null;
+    createdBy?: string | null;
   }
 }

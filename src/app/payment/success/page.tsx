@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, Result, Button, Spin, Typography } from "antd";
 import { paymentApi } from "@/lib/api";
@@ -12,6 +12,7 @@ function PaymentSuccessContent() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [planInfo, setPlanInfo] = useState<{ name: string; duration: string } | null>(null);
+  const captureStarted = useRef(false);
 
   function formatDuration(days: number): string {
     if (days === 0) return "30 minutes";
@@ -24,6 +25,10 @@ function PaymentSuccessContent() {
   }
 
   useEffect(() => {
+    // Guard against StrictMode double-invoking effects — capture only once.
+    if (captureStarted.current) return;
+    captureStarted.current = true;
+
     const capturePayment = async () => {
       const token = searchParams.get("token");
       const payerId = searchParams.get("PayerID");

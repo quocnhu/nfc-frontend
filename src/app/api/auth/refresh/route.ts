@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const SECURE_COOKIES = process.env.NODE_ENV === "production";
 
-export async function POST(req: Request) {
-  const refreshToken = req.headers
-    .get("cookie")
-    ?.split(";")
-    .find((c) => c.trim().startsWith("refresh_token="))
-    ?.split("=")[1];
+export async function POST() {
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get("refresh_token")?.value;
 
   if (!refreshToken) {
     return NextResponse.json({ error: "No refresh token" }, { status: 401 });
@@ -18,31 +17,35 @@ export async function POST(req: Request) {
     headers: {
       Cookie: `refresh_token=${refreshToken}`,
     },
+    cache: "no-store",
   });
 
   if (!backendRes.ok) {
     const response = NextResponse.json({ error: "Refresh failed" }, { status: 401 });
-    
+
     // Clear all auth cookies to break the redirect loop
     response.cookies.set("next-auth.session-token", "", {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
       maxAge: 0,
+      secure: SECURE_COOKIES,
     });
     response.cookies.set("jwt", "", {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
       maxAge: 0,
+      secure: SECURE_COOKIES,
     });
     response.cookies.set("refresh_token", "", {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
       maxAge: 0,
+      secure: SECURE_COOKIES,
     });
-    
+
     return response;
   }
 
@@ -59,13 +62,6 @@ export async function POST(req: Request) {
     if (name === "refresh_token") refreshTokenNew = value;
   }
 
-  // Fallback to response body if cookies not found
-  if (!accessToken || !refreshTokenNew) {
-    const body = await backendRes.json().catch(() => ({}));
-    if (body?.data?.access_token) accessToken = body.data.access_token;
-    if (body?.data?.refresh_token) refreshTokenNew = body.data.refresh_token;
-  }
-
   const response = NextResponse.json({ success: true });
 
   if (accessToken) {
@@ -74,6 +70,7 @@ export async function POST(req: Request) {
       sameSite: "lax",
       path: "/",
       maxAge: 15 * 60,
+      secure: SECURE_COOKIES,
     });
   }
 
@@ -83,6 +80,7 @@ export async function POST(req: Request) {
       sameSite: "lax",
       path: "/",
       maxAge: 7 * 24 * 60 * 60,
+      secure: SECURE_COOKIES,
     });
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Row, Col, List, Tag, Typography, Avatar, Tooltip, Button, Badge, DatePicker, Spin, Card } from "antd";
+import { Row, Col, List, Tag, Typography, Avatar, Tooltip, Button, Badge, DatePicker, Spin, Card, Skeleton, message } from "antd";
 import {
   UserOutlined,
   TeamOutlined,
@@ -21,22 +21,18 @@ import {
   CrownOutlined,
 } from "@ant-design/icons";
 import { dashboardApi } from "@/lib/api";
+import { extractApiError } from "@/lib/api-error";
 import { formatDateTime } from "@/utils/helpers";
 import { useSession } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
 import { StatCard, SectionCard } from "@/components/ui";
 import type { DashboardStats, History, SuspiciousActivity, SuspiciousAlert } from "@/types";
 import type { Dayjs } from "dayjs";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import dynamic from "next/dynamic";
+
+const GrowthChart = dynamic(() => import("./GrowthChart"), {
+  loading: () => <Skeleton active />,
+});
 
 const { RangePicker } = DatePicker;
 
@@ -139,7 +135,9 @@ export default function DashboardPage() {
       const endDate = range?.[1]?.format("YYYY-MM-DD");
       const res = await dashboardApi.subscriptionStats(startDate, endDate);
       setSubscriptionStats(res.data?.data || null);
-    } catch {}
+    } catch (err) {
+      message.error(extractApiError(err, "Failed to load subscription stats"));
+    }
   };
 
   const loadPaymentStats = async (dates?: [Dayjs | null, Dayjs | null] | null) => {
@@ -149,7 +147,9 @@ export default function DashboardPage() {
       const endDate = range?.[1]?.format("YYYY-MM-DD");
       const res = await dashboardApi.paymentStats(startDate, endDate);
       setPaymentStats(res.data?.data || null);
-    } catch {}
+    } catch (err) {
+      message.error(extractApiError(err, "Failed to load payment stats"));
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -299,59 +299,7 @@ export default function DashboardPage() {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24}>
           <SectionCard title="Growth Overview (Last 12 Months)">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#2e2e40" : "#f0f0f0"} />
-                  <XAxis
-                    dataKey="month"
-                    stroke={isDark ? "#a0a0b0" : "#6e6e73"}
-                    style={{ fontSize: 12 }}
-                  />
-                  <YAxis
-                    yAxisId="left"
-                    stroke={isDark ? "#a0a0b0" : "#6e6e73"}
-                    style={{ fontSize: 12 }}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    stroke={isDark ? "#a0a0b0" : "#6e6e73"}
-                    style={{ fontSize: 12 }}
-                  />
-                  <RechartsTooltip
-                    contentStyle={{
-                      backgroundColor: isDark ? "#1e1e2e" : "#fff",
-                      border: isDark ? "1px solid #2e2e40" : "1px solid #f0f0f0",
-                      borderRadius: 8,
-                    }}
-                  />
-                  <Legend />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="subscriptions"
-                    stroke="#4f46e5"
-                    strokeWidth={2}
-                    dot={{ fill: "#4f46e5", r: 4 }}
-                    name="Subscriptions"
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ fill: "#10b981", r: 4 }}
-                    name="Revenue ($)"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ textAlign: "center", padding: 48, color: isDark ? "#a0a0b0" : "#6e6e73" }}>
-                No growth data available
-              </div>
-            )}
+            <GrowthChart data={chartData} />
           </SectionCard>
         </Col>
       </Row>

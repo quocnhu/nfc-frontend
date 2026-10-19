@@ -4,11 +4,26 @@ import { NextResponse } from "next/server";
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
 const REFRESH_MAX_AGE = 7 * 24 * 60 * 60;
+const SECURE_COOKIES = process.env.NODE_ENV === "production";
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
-  if (!email || !password) {
+  const { email, password } = (body ?? {}) as { email?: unknown; password?: unknown };
+
+  if (
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    email.length === 0 ||
+    password.length === 0 ||
+    email.length > 320 ||
+    password.length > 128
+  ) {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
 
@@ -19,8 +34,13 @@ export async function POST(req: Request) {
   });
 
   if (!signinRes.ok) {
-    const err = await signinRes.json().catch(() => ({ message: "Login failed" }));
-    return NextResponse.json({ error: err.message || "Login failed" }, { status: signinRes.status });
+    const err = await signinRes.json().catch(() => ({}));
+    const message = typeof err?.message === "string" && err.message ? err.message : "Login failed";
+    const retryAfter = err?.retryAfter;
+    return NextResponse.json(
+      { error: message, ...(retryAfter !== undefined ? { retryAfter } : {}) },
+      { status: signinRes.status },
+    );
   }
 
   const rawCookies = signinRes.headers.getSetCookie();
@@ -30,7 +50,7 @@ export async function POST(req: Request) {
 
   for (const cookie of rawCookies) {
     const pair = cookie.split(";")[0].trim();
-    const eqIdx = pair.indexOf("=") ;
+    const eqIdx = pair.indexOf("=");
     const name = pair.substring(0, eqIdx).trim();
     const value = pair.substring(eqIdx + 1).trim();
     if (name === "jwt") jwtValue = value;
@@ -39,9 +59,14 @@ export async function POST(req: Request) {
 
   const permRes = await fetch(`${BACKEND_URL}/api/dashboard/permissions`, {
     headers: { Cookie: `jwt=${jwtValue}` },
+    cache: "no-store",
   });
 
-  const permData = await permRes.json();
+  if (!permRes.ok) {
+    return NextResponse.json({ error: "Failed to load user data" }, { status: permRes.status });
+  }
+
+  const permData = await permRes.json().catch(() => ({}));
   const data = permData?.data;
 
   if (!data?.user) {
@@ -70,6 +95,7 @@ export async function POST(req: Request) {
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_MAX_AGE,
+    secure: SECURE_COOKIES,
   });
 
   if (jwtValue) {
@@ -78,6 +104,7 @@ export async function POST(req: Request) {
       sameSite: "lax",
       path: "/",
       maxAge: 15 * 60,
+      secure: SECURE_COOKIES,
     });
   }
 
@@ -87,6 +114,7 @@ export async function POST(req: Request) {
       sameSite: "lax",
       path: "/",
       maxAge: REFRESH_MAX_AGE,
+      secure: SECURE_COOKIES,
     });
   }
 

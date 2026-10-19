@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Table, Tag, Tooltip } from "antd";
+import { Table, Tag, Tooltip, message } from "antd";
 import {
   PlusCircleOutlined,
   EditOutlined,
@@ -10,6 +10,7 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import { historyApi } from "@/lib/api";
+import { extractApiError } from "@/lib/api-error";
 import { formatDateTime } from "@/utils/helpers";
 import type { History } from "@/types";
 
@@ -49,7 +50,10 @@ export default function HistoryPage() {
     historyApi
       .list()
       .then((res) => setItems(res.data?.data || []))
-      .catch(() => {})
+      .catch((err) => {
+        setItems([]);
+        message.error(extractApiError(err, "Failed to load history"));
+      })
       .finally(() => setLoading(false));
   }, []);
 

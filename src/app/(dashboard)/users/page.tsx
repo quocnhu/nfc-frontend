@@ -116,19 +116,18 @@ export default function UsersPage() {
   const load = async () => {
     setLoading(true);
 
-    // Load permissions first (determines what user can see)
-    try {
-      const myPermsRes = await dashboardApi.permissions();
-      const permData = myPermsRes.data?.data;
-      setCurrentUserPermissions(permData?.mergedPermissions || []);
-      setCurrentUserId(permData?.user?.id || "");
-    } catch {
-      console.error("Failed to load permissions");
-    }
+    // Kick everything off concurrently — permissions only gate column visibility.
+    const loadMyPermissions = dashboardApi
+      .permissions()
+      .then((myPermsRes) => {
+        const permData = myPermsRes.data?.data;
+        setCurrentUserPermissions(permData?.mergedPermissions || []);
+        setCurrentUserId(permData?.user?.id || "");
+      })
+      .catch((err) => {
+        console.error("Failed to load permissions:", err);
+      });
 
-    setLoading(false);
-
-    // Load users, roles, permissions independently
     const loadUsers = async () => {
       setLoadingUsers(true);
       try {
@@ -165,7 +164,8 @@ export default function UsersPage() {
       }
     };
 
-    await Promise.allSettled([loadUsers(), loadRoles(), loadPerms()]);
+    await Promise.all([loadMyPermissions, loadUsers(), loadRoles(), loadPerms()]);
+    setLoading(false);
   };
 
   const hasReadAll = currentUserPermissions.includes("read:user:all");

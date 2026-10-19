@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Fragment } from "react";
 import { Button, Typography, Space, Avatar, Tag, Card, Row, Col, Spin, Tooltip } from "antd";
 import {
   LoginOutlined,
@@ -43,6 +43,14 @@ const TOUR_GUIDE_DATA = [
   { icon: <DesktopOutlined />, title: "Tour Operator", desc: "Planning itineraries, coordinating logistics, and ensuring seamless travel experiences for groups of all sizes." },
 ];
 
+const ARCH_FLOW_ITEMS = [
+  { icon: <DesktopOutlined />, label: "On-Premise", sub: "Linux / Cisco", color: "#fbbf24", glow: "#fbbf24" },
+  { icon: <CloudServerOutlined />, label: "Cloud", sub: "AWS / GCP", color: "#22d3ee", glow: "#22d3ee" },
+  { icon: <ContainerOutlined />, label: "Containers", sub: "Docker / K8s", color: "#38bdf8", glow: "#38bdf8" },
+  { icon: <DeploymentUnitOutlined />, label: "CI/CD", sub: "ArgoCD", color: "#c084fc", glow: "#c084fc" },
+  { icon: <ApiOutlined />, label: "Monitoring", sub: "Prometheus", color: "#fb7185", glow: "#fb7185" },
+];
+
 function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -65,19 +73,43 @@ function Slideshow({ photos }: { photos: string[] }) {
 
   useEffect(() => {
     if (items.length <= 1) return;
-    const timer = setInterval(() => setIdx((i) => (i + 1) % items.length), 4500);
-    return () => clearInterval(timer);
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (timer) return;
+      timer = setInterval(() => setIdx((i) => (i + 1) % items.length), 4500);
+    };
+    const stop = () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") stop();
+      else start();
+    };
+    if (document.visibilityState !== "hidden") start();
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [items.length]);
+
+  const visibleSlides = Array.from(new Set([idx, (idx + 1) % items.length]));
 
   return (
     <div style={{ position: "relative", width: "100%", borderRadius: 20, overflow: "hidden", background: "#111" }}>
       <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%" }}>
-        {items.map((src, i) => (
+        {visibleSlides.map((i) => (
           <img
             key={i}
-            src={src}
+            src={items[i]}
             alt={`Slide ${i + 1}`}
-            loading="lazy"
+            width={1200}
+            height={750}
+            loading={i === 0 ? "eager" : "lazy"}
+            decoding="async"
             style={{
               position: "absolute",
               inset: 0,
@@ -184,6 +216,28 @@ export default function HomePage() {
 
   const [welcomePhase, setWelcomePhase] = useState(0);
   const [homepageData, setHomepageData] = useState<PublicHomepageData | null>(null);
+  const flowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = flowRef.current;
+    if (!el) return;
+    const update = () => {
+      const overflow = el.scrollWidth - el.clientWidth;
+      const isSmall = window.matchMedia("(max-width: 767px)").matches;
+      if (isSmall && overflow > 0) {
+        el.style.setProperty("--flow-shift", `${Math.round(overflow + el.clientWidth * 0.14)}px`);
+        el.classList.add("arch-flow--auto");
+      } else {
+        el.classList.remove("arch-flow--auto");
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    document.fonts?.ready.then(update).catch(() => {});
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const t1 = setTimeout(() => setWelcomePhase(1), 400);
@@ -195,13 +249,14 @@ export default function HomePage() {
   useEffect(() => {
     homepageApi.getPublic()
       .then((res) => {
-        console.log('Homepage API Response:', res.data);
         if (res.data?.success && res.data.data) {
           setHomepageData(res.data.data);
         }
       })
       .catch((err) => {
-        console.error('Homepage API Error:', err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error('Homepage API Error:', err);
+        }
       });
   }, []);
 
@@ -230,17 +285,17 @@ export default function HomePage() {
           {/* QN logo */}
           <div
             style={{
-              width: 80,
-              height: 80,
-              borderRadius: 20,
-              background: "linear-gradient(135deg, #667eea, #764ba2)",
+               width: 80,
+               height: 80,
+               borderRadius: 20,
+               background: "linear-gradient(135deg, rgb(96, 165, 250), rgb(14, 165, 233))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               transform: welcomePhase >= 1 ? "scale(1) rotate(0deg)" : "scale(0.5) rotate(-20deg)",
               opacity: welcomePhase >= 1 ? 1 : 0,
               transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-              boxShadow: "0 0 40px #667eea55",
+              boxShadow: "0 0 40px rgba(96, 165, 250, 0.35)",
             }}
           >
             <Text strong style={{ color: "#fff", fontSize: 28, letterSpacing: 1 }}>QN</Text>
@@ -266,6 +321,7 @@ export default function HomePage() {
 
           {/* Welcome scrolling text */}
           <div
+            className="welcome-band"
             style={{
               width: "100vw",
               maxWidth: 600,
@@ -279,6 +335,7 @@ export default function HomePage() {
             }}
           >
             <div
+              className="welcome-tick-text"
               style={{
                 whiteSpace: "nowrap",
                 fontSize: 13,
@@ -289,7 +346,9 @@ export default function HomePage() {
                 animation: welcomePhase >= 2 ? "marqueeScroll 12s linear infinite" : "none",
               }}
             >
-              Welcome to Nguyễn Quốc Nhu&apos;s Website&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyễn Quốc Nhu&apos;s Website&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyễn Quốc Nhu&apos;s Website
+              <span className="welcome-tick">Welcome to Nguyễn Quốc Nhu&apos;s Website</span>
+              <span className="welcome-tick">&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyễn Quốc Nhu&apos;s Website</span>
+              <span className="welcome-tick">&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;Welcome to Nguyễn Quốc Nhu&apos;s Website</span>
             </div>
           </div>
         </div>
@@ -317,7 +376,7 @@ export default function HomePage() {
 
       <style>{`
         @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(-40px, 30px); } }
-        @keyframes pulse { 0%, 100% { box-shadow: 0 0 20px #667eea44; } 50% { box-shadow: 0 0 40px #764ba266; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.06); opacity: 0.85; } }
         @keyframes halo { 0%, 100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.08); opacity: 1; } }
         @keyframes ripple { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2.5); opacity: 0; } }
         @keyframes welcomeLine { 0% { transform: translateX(-30%); } 50% { transform: translateX(30%); } 100% { transform: translateX(-30%); } }
@@ -366,8 +425,7 @@ export default function HomePage() {
           justifyContent: "space-between",
           alignItems: "center",
           gap: 8,
-          background: "rgba(10,10,30,0.75)",
-          backdropFilter: "blur(16px)",
+          background: "rgba(10,10,30,0.92)",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >
@@ -421,9 +479,6 @@ export default function HomePage() {
               <EnvironmentOutlined style={{ color: "#fff", fontSize: 7 }} />
             </div>
           </div>
-          <Text strong style={{ fontSize: 14, color: "#fff", letterSpacing: 0.5 }}>
-            Nguyễn Quốc Nhu
-          </Text>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
           <Button
@@ -451,7 +506,7 @@ export default function HomePage() {
                 size="small"
                 icon={<RightOutlined />}
                 onClick={() => router.push("/profile")}
-                style={{ borderRadius: 20, background: "linear-gradient(135deg, #667eea, #764ba2)", border: "none", fontSize: 13 }}
+                style={{ borderRadius: 20, background: "linear-gradient(135deg, rgb(34, 211, 238), rgb(59, 130, 246))", border: "none", fontSize: 13 }}
               >
                 Dashboard
               </Button>
@@ -462,7 +517,7 @@ export default function HomePage() {
               size="small"
               icon={<LoginOutlined />}
               onClick={() => router.push("/login")}
-              style={{ borderRadius: 20, background: "linear-gradient(135deg, #667eea, #764ba2)", border: "none", fontSize: 13 }}
+              style={{ borderRadius: 20, background: "linear-gradient(135deg, rgb(34, 211, 238), rgb(59, 130, 246))", border: "none", fontSize: 13 }}
             >
               Login
             </Button>
@@ -495,7 +550,7 @@ export default function HomePage() {
               src={homepageAvatar || user?.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=QuocNhu&backgroundColor=667eea"}
               style={{
                 border: "4px solid #667eea",
-                boxShadow: "0 0 40px #667eea55, 0 0 80px #764ba233",
+                boxShadow: "0 0 40px rgba(96, 165, 250, 0.35), 0 0 80px rgba(14, 165, 233, 0.2)",
               }}
             />
           </div>
@@ -514,13 +569,15 @@ export default function HomePage() {
             size="large"
             icon={<MailOutlined />}
             onClick={() => router.push(`/public/user?userId=${process.env.NEXT_PUBLIC_PROFILE_USER_ID || ""}`)}
+            className="glow-btn"
             style={{
               marginTop: 28,
               borderRadius: 28,
               padding: "0 32px",
               height: 48,
-              background: "linear-gradient(135deg, #667eea, #764ba2)",
+              background: "linear-gradient(135deg, rgb(34, 211, 238), rgb(59, 130, 246))",
               border: "none",
+              boxShadow: "0 4px 20px rgba(34, 211, 238, 0.35)",
               fontWeight: 600,
               fontSize: 15,
             }}
@@ -545,7 +602,7 @@ export default function HomePage() {
       <Section id="it-section">
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "80px 24px", position: "relative", zIndex: 1 }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <Tag style={{ borderRadius: 20, padding: "4px 16px", marginBottom: 16, background: "#667eea18", color: "#667eea", border: "1px solid #667eea33", fontSize: 12 }}>
+            <Tag style={{ borderRadius: 20, padding: "4px 16px", marginBottom: 16, background: "rgba(34, 211, 238, 0.12)", color: "rgb(34, 211, 238)", border: "1px solid rgba(34, 211, 238, 0.32)", fontSize: 12 }}>
               INFORMATION TECHNOLOGY
             </Tag>
             <Title level={2} style={{ color: "#fff", margin: 0 }}>
@@ -804,45 +861,47 @@ export default function HomePage() {
           {/* Architecture flow */}
           <div style={{ marginTop: 48 }}>
             <Card bordered={false} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)" }}>
-              <Row gutter={[24, 24]} align="middle" justify="center">
-                {[
-                  { icon: <DesktopOutlined />, label: "On-Premise", sub: "Linux / Cisco", color: "#fbbf24" },
-                  { icon: <CloudServerOutlined />, label: "Cloud", sub: "AWS / GCP", color: "#22d3ee" },
-                  { icon: <ContainerOutlined />, label: "Containers", sub: "Docker / K8s", color: "#38bdf8" },
-                  { icon: <DeploymentUnitOutlined />, label: "CI/CD", sub: "ArgoCD", color: "#c084fc" },
-                  { icon: <ApiOutlined />, label: "Monitoring", sub: "Prometheus", color: "#fb7185" },
-                ].map((item, i, arr) => (
-                  <Col key={item.label} xs={12} sm={8} md={4} style={{ position: "relative" }}>
-                    <div style={{ textAlign: "center" }}>
-                      <div
-                        style={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: 14,
-                          background: `${item.color}15`,
-                          border: `1.5px solid ${item.color}44`,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 24,
-                          color: item.color,
-                          marginBottom: 10,
-                          transition: "transform 0.3s, box-shadow 0.3s",
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; e.currentTarget.style.boxShadow = `0 0 24px ${item.color}44`; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
-                      >
-                        {item.icon}
-                      </div>
-                      <Text strong style={{ color: "#e0e0e0", fontSize: 12, display: "block" }}>{item.label}</Text>
-                      <div style={{ color: "#666", fontSize: 11, marginTop: 2 }}>{item.sub}</div>
-                      {i < arr.length - 1 && (
-                        <RightOutlined style={{ position: "absolute", right: -18, top: 16, color: "#444", fontSize: 11 }} />
-                      )}
-                    </div>
-                  </Col>
-                ))}
-              </Row>
+              <div className="arch-flow" ref={flowRef}>
+                <div className="arch-flow-track">
+                  <div className="arch-flow-group">
+                    {ARCH_FLOW_ITEMS.map((item, i, arr) => (
+                      <Fragment key={`a-${item.label}`}>
+                        <div className="arch-flow-step" style={{ "--i": i, "--glow": `${item.glow}66` } as React.CSSProperties}>
+                          <div
+                            className="arch-flow-icon"
+                            style={{
+                              width: 56,
+                              height: 56,
+                              borderRadius: 14,
+                              background: `${item.color}15`,
+                              border: `1.5px solid ${item.color}44`,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 24,
+                              color: item.color,
+                              marginBottom: 10,
+                              transition: "transform 0.3s, box-shadow 0.3s",
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; e.currentTarget.style.boxShadow = `0 0 24px ${item.color}44`; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
+                          >
+                            {item.icon}
+                          </div>
+                          <Text strong style={{ color: "#e0e0e0", fontSize: 12, display: "block" }}>{item.label}</Text>
+                          <div style={{ color: "#666", fontSize: 11, marginTop: 2 }}>{item.sub}</div>
+                        </div>
+                        {i < arr.length - 1 && (
+                          <div className="arch-flow-connector" style={{ "--i": i } as React.CSSProperties}>
+                            <div className="arch-flow-line" />
+                            <RightOutlined style={{ marginLeft: 4 }} />
+                          </div>
+                        )}
+                      </Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </Card>
           </div>
         </div>

@@ -71,6 +71,47 @@ export default function HomepageAdminPage() {
     }
   };
 
+  const handleUploadMultiple = async (folder: string, files: File[]) => {
+    if (!files || files.length === 0) return;
+    setUploading(folder);
+    let successCount = 0;
+    const errors: string[] = [];
+
+    try {
+      const results = await Promise.allSettled(
+        files.map((file) => homepageApi.upload(folder, file))
+      );
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        if (r.status === "fulfilled" && r.value?.data?.success) {
+          successCount += 1;
+        } else {
+          const msg =
+            r.status === "rejected"
+              ? (r.reason?.response?.data?.message || r.reason?.message || "Upload failed")
+              : ("Upload failed");
+          errors.push(`${files[i].name}: ${msg}`);
+        }
+      }
+
+      if (successCount > 0) {
+        message.success(
+          successCount === files.length
+            ? `Uploaded ${successCount} image${successCount > 1 ? "s" : ""}`
+            : `Uploaded ${successCount}/${files.length} images`
+        );
+        await fetchData();
+      }
+      if (errors.length > 0) {
+        message.error(errors.slice(0, 3).join(" | "));
+      }
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Upload failed");
+    } finally {
+      setUploading(null);
+    }
+  };
+
   const handleDelete = async (folder: string, filename: string) => {
     try {
       const res = await homepageApi.delete(folder, filename);
@@ -177,17 +218,26 @@ export default function HomepageAdminPage() {
             <Dragger
               multiple
               showUploadList={false}
-              beforeUpload={(file) => {
+              beforeUpload={(file, fileList) => {
                 const isImage = file.type.startsWith("image/");
                 if (!isImage) {
-                  message.error("Only image files are allowed");
+                  message.error(`${file.name}: Only image files are allowed`);
                   return false;
                 }
                 if (file.size > 10 * 1024 * 1024) {
-                  message.error("File must be smaller than 10MB");
+                  message.error(`${file.name}: File must be smaller than 10MB`);
                   return false;
                 }
-                handleUpload("slideshowpics", file);
+                // Trigger batch upload when we see the last file in the selection
+                const idx = fileList.findIndex((f) => f.uid === file.uid);
+                if (idx === fileList.length - 1) {
+                  const valid = fileList.filter((f) => f.type.startsWith("image/") && f.size <= 10 * 1024 * 1024);
+                  if (valid.length > 0) {
+                    handleUploadMultiple("slideshowpics", valid);
+                  } else {
+                    message.error("No valid images to upload");
+                  }
+                }
                 return false;
               }}
               disabled={uploading !== null}

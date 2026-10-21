@@ -25,6 +25,9 @@ import type {
   UserSubscription,
 } from "@/types";
 
+const IMAGE_UPLOAD_TIMEOUT = 60000;
+const UPLOAD_TIMEOUT = 300000;
+
 export const authApi = {
   signin: (data: { email: string; password: string }) =>
     api.post<ApiResponse>("/auth/signin", data),
@@ -144,6 +147,7 @@ export const uploadApi = {
     return api.post<ApiResponse<{ uploaded: { url: string; filename: string; size: number; folder: string }[]; errors: string[] }>>(
       `/upload/${folder}`,
       form,
+      { timeout: UPLOAD_TIMEOUT },
     );
   },
   listFiles: (folder: string) =>
@@ -164,6 +168,7 @@ export const userdataApi = {
     const form = new FormData();
     form.append('file', file);
     return api.post<ApiResponse<{ avatarUrl: string }>>('/upload/userdata/avatar', form, {
+      timeout: IMAGE_UPLOAD_TIMEOUT,
       onUploadProgress: (e) => {
         if (onProgress && e.total) {
           onProgress(Math.round((e.loaded * 100) / e.total));
@@ -179,6 +184,7 @@ export const userdataApi = {
       '/upload/userdata/files',
       form,
       {
+        timeout: UPLOAD_TIMEOUT,
         onUploadProgress: (e) => {
           if (onProgress && e.total) {
             onProgress(Math.round((e.loaded * 100) / e.total));
@@ -198,6 +204,7 @@ export const userdataApi = {
     form.append('userId', userId);
     form.append('file', file);
     return api.post<ApiResponse<{ avatarUrl: string }>>('/upload/userdata/avatar/upload', form, {
+      timeout: IMAGE_UPLOAD_TIMEOUT,
       onUploadProgress: (e) => {
         if (onProgress && e.total) {
           onProgress(Math.round((e.loaded * 100) / e.total));
@@ -382,6 +389,7 @@ export const homepageApi = {
     return api.post<ApiResponse<{ url: string; filename: string; path: string; size: number; folder: string }>>(
       '/upload/homepage/upload',
       form,
+      { timeout: IMAGE_UPLOAD_TIMEOUT },
     );
   },
   delete: (folder: string, filename: string) =>

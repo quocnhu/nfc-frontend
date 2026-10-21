@@ -1,11 +1,30 @@
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
 import { notification } from "antd";
 
 const api = axios.create({
   baseURL: "/backend-api",
   timeout: 15000,
   withCredentials: true,
-  headers: { "Content-Type": "application/json" },
+});
+
+type RetriableConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+  _formData?: FormData;
+};
+
+api.interceptors.request.use((config) => {
+  const isFormData = typeof FormData !== "undefined" && config.data instanceof FormData;
+
+  if (isFormData) {
+    // Keep the raw FormData so a 401 retry can re-send the binary body,
+    // and let the browser set multipart/form-data with its boundary.
+    (config as RetriableConfig)._formData = config.data;
+    config.headers.delete("Content-Type");
+  } else {
+    config.headers.set("Content-Type", "application/json", false);
+  }
+
+  return config;
 });
 
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password"];
@@ -31,6 +50,17 @@ function processQueue(error: unknown) {
 function isOnAuthPage() {
   if (typeof window === "undefined") return false;
   return AUTH_ROUTES.some((route) => window.location.pathname.startsWith(route));
+}
+
+/**
+ * A request that was already sent has its FormData body replaced by a JSON
+ * string during the axios transform step. Restore the original binary body so
+ * the retried request is still a valid multipart upload.
+ */
+function restoreFormBody(config: RetriableConfig) {
+  if (!config._formData) return;
+  config.data = config._formData;
+  config.headers.delete("Content-Type");
 }
 
 let hasShownSessionExpired = false;
@@ -76,7 +106,10 @@ api.interceptors.response.use(
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then(() => api(originalRequest))
+          .then(() => {
+            restoreFormBody(originalRequest);
+            return api(originalRequest);
+          })
           .catch((e) => Promise.reject(e));
       }
 
@@ -86,6 +119,7 @@ api.interceptors.response.use(
       try {
         await axios.post(REFRESH_URL, null, { withCredentials: true });
         processQueue(null);
+        restoreFormBody(originalRequest);
         return api(originalRequest);
       } catch (refreshError: any) {
         processQueue(refreshError);

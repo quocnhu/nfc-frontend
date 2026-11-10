@@ -29,6 +29,7 @@ import { extractApiError } from "@/lib/api-error";
 import { useAvatarSync } from "@/hooks/useAvatarSync";
 import { useAvatar } from "@/components/providers/AvatarProvider";
 import { getCroppedImg } from "@/lib/cropImage";
+import { getPublicBaseUrl } from "@/lib/public-url";
 import { InfoRow } from "@/components/ui";
 
 const Cropper = dynamic(() => import("react-easy-crop").then(mod => mod.default), { ssr: false });
@@ -171,7 +172,7 @@ export default function ProfilePage() {
     img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
   };
 
-  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/public/user?userId=${(user as any)?.id || ""}`;
+  const publicUrl = `${getPublicBaseUrl()}/public/user?userId=${(user as any)?.id || ""}`;
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto" }}>

@@ -27,6 +27,7 @@ import {
 } from "@ant-design/icons";
 import { QRCodeSVG } from "qrcode.react";
 import { qrApi } from "@/lib/api";
+import { getPublicBaseUrl } from "@/lib/public-url";
 import { useTheme } from "@/components/providers/AntdProvider";
 import { useSession } from "next-auth/react";
 import type { QRCode } from "@/types";
@@ -48,7 +49,7 @@ export default function QRPage() {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/public/user?userId=${(user as any)?.id || ""}`;
+  const publicUrl = `${getPublicBaseUrl()}/public/user?userId=${(user as any)?.id || ""}`;
 
   // ─── Load QR codes ───
   const loadQRCodes = async () => {

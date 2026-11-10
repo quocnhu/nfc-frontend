@@ -30,6 +30,7 @@ import { useAvatarSync } from "@/hooks/useAvatarSync";
 import { useAvatar } from "@/components/providers/AvatarProvider";
 import { getCroppedImg } from "@/lib/cropImage";
 import { getPublicBaseUrl } from "@/lib/public-url";
+import { downloadQrSvg } from "@/lib/download-qr";
 import { InfoRow } from "@/components/ui";
 
 const Cropper = dynamic(() => import("react-easy-crop").then(mod => mod.default), { ssr: false });
@@ -153,23 +154,9 @@ export default function ProfilePage() {
     const svgElement = qrRef.current?.querySelector("svg");
     if (!svgElement) return;
 
-    const svgData = new XMLSerializer().serializeToString(svgElement);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-
-    canvas.width = 512;
-    canvas.height = 512;
-
-    img.onload = () => {
-      ctx?.drawImage(img, 0, 0, 512, 512);
-      const link = document.createElement("a");
-      link.download = `qr-${user?.name || "profile"}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    };
-
-    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    downloadQrSvg(svgElement, `qr-${user?.name || "profile"}.png`).catch((err) => {
+      messageApi.error(err?.message || "Could not download QR code");
+    });
   };
 
   const publicUrl = `${getPublicBaseUrl()}/public/user?userId=${(user as any)?.id || ""}`;
@@ -313,7 +300,7 @@ export default function ProfilePage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 16 }}>
             <div ref={qrRef} style={{ padding: 16, borderRadius: 12, background: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
-              <QRCodeSVG value={publicUrl} size={160} />
+              <QRCodeSVG value={publicUrl} size={160} level="M" marginSize={4} />
             </div>
             <Button
               type="primary"

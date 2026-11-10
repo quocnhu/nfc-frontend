@@ -28,6 +28,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { qrApi } from "@/lib/api";
 import { getPublicBaseUrl } from "@/lib/public-url";
+import { downloadQrSvg } from "@/lib/download-qr";
 import { useTheme } from "@/components/providers/AntdProvider";
 import { useSession } from "next-auth/react";
 import type { QRCode } from "@/types";
@@ -121,23 +122,9 @@ export default function QRPage() {
     const svgEl = document.getElementById(sourceId || `qr-table-${qr.id}`)?.querySelector("svg");
     if (!svgEl) return;
 
-    const svgData = new XMLSerializer().serializeToString(svgEl);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const pngUrl = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.download = `${qr.name.replace(/\s+/g, "_")}_qr.png`;
-      link.href = pngUrl;
-      link.click();
-    };
-
-    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+    downloadQrSvg(svgEl, `${qr.name.replace(/\s+/g, "_")}_qr.png`).catch((err) => {
+      messageApi.error(err?.message || "Could not download QR code");
+    });
   };
 
   // ─── Copy URL ───
@@ -164,7 +151,7 @@ export default function QRPage() {
           style={{ cursor: "pointer" }}
           onClick={() => { setSelectedQR(record); setViewModalOpen(true); }}
         >
-          <QRCodeSVG value={record.url} size={48} />
+          <QRCodeSVG value={record.url} size={48} level="M" marginSize={2} />
         </div>
       ),
     },
@@ -356,7 +343,7 @@ export default function QRPage() {
               boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
             }}>
               <div id={`qr-modal-${selectedQR.id}`}>
-                <QRCodeSVG value={selectedQR.url} size={220} />
+                <QRCodeSVG value={selectedQR.url} size={220} level="M" marginSize={4} />
               </div>
             </div>
             <div style={{ marginBottom: 16 }}>

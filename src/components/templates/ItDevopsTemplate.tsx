@@ -11,6 +11,7 @@ import {
   PATHS,
   Row,
   TemplateProps,
+  formatRole,
   kindOf,
   loadThree,
   openHref,
@@ -174,8 +175,8 @@ const CSS = `
 .it-template #gl{position:relative;z-index:1;width:100%;height:100%;display:block;touch-action:none}
 .it-template .sky2{position:absolute;inset:0;opacity:0;transition:opacity .8s;background:radial-gradient(circle at 20% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 70% 12%,#fff 0 1.5px,transparent 2.5px),radial-gradient(circle at 85% 38%,#fff 0 1px,transparent 2px),radial-gradient(circle at 40% 8%,#cde 0 1px,transparent 2px),radial-gradient(circle at 12% 45%,#fff 0 1px,transparent 2px),radial-gradient(circle at 60% 30%,#fff 0 1px,transparent 2px),linear-gradient(180deg,#120e3d 0,#2a2a7c 55%,#0f6a82 100%)}
 .it-template .stage.dev .sky2{opacity:1}
-.it-template .top{position:absolute;z-index:6;left:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.88);backdrop-filter:blur(8px);box-shadow:0 6px 18px -8px rgba(0,40,60,.5)}
-.it-template .top button{border:0;background:transparent;font:inherit;font-weight:700;font-size:13px;padding:6px 12px;border-radius:999px;cursor:pointer;color:#16414d}
+.it-template .top{position:absolute;z-index:6;left:10px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.88);backdrop-filter:blur(8px);box-shadow:0 6px 18px -8px rgba(0,40,60,.5)}
+.it-template .top button{border:0;background:transparent;font:inherit;font-weight:700;font-size:11px;padding:4px 8px;border-radius:999px;cursor:pointer;color:#16414d}
 .it-template .top button.on{background:#0a7f96;color:#fff}
 .it-template .switch{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:4;display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.88);backdrop-filter:blur(8px);box-shadow:0 6px 18px -8px rgba(0,40,60,.5)}
 .it-template .switch button{border:0;background:transparent;font:inherit;font-weight:700;font-size:14px;padding:6px 12px;border-radius:999px;cursor:pointer;color:#16414d;white-space:nowrap}
@@ -188,13 +189,12 @@ const CSS = `
 .it-template .scroll{overflow-y:auto;overscroll-behavior:contain;padding:56px 18px calc(18px + env(safe-area-inset-bottom,0px));scrollbar-width:thin}
 .it-template .avatar{position:absolute;z-index:2;top:-48px;left:50%;margin-left:-48px;width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);background:#fff;box-shadow:0 8px 22px -8px rgba(0,0,0,.5);overflow:hidden}
 .it-template .avatar svg,.it-template .avatar img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
-.it-template .avatar::after{content:"";position:absolute;right:4px;bottom:6px;width:16px;height:16px;border-radius:50%;background:var(--lagoon);border:3px solid var(--bg)}
 .it-template .fold{position:absolute;z-index:3;top:12px;right:14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--text);display:grid;place-items:center;cursor:pointer}
 .it-template .fold svg{width:22px;height:22px;fill:currentColor;transition:transform .3s}
 .it-template .card.min .fold svg{transform:rotate(180deg)}
 .it-template .who{text-align:center}
 .it-template h1{font-size:27px;font-weight:800;line-height:1.15}
-.it-template .role{margin-top:2px;color:var(--sun);font-size:17px;font-weight:700}
+.it-template .role{display:inline-block;margin-top:8px;padding:4px 14px;border-radius:12px;background:color-mix(in srgb,var(--sun) 15%,transparent);border:1px solid color-mix(in srgb,var(--sun) 42%,transparent);color:var(--sun);font-size:12px;font-weight:600;letter-spacing:.5px}
 .it-template .bio{margin:6px auto 0;max-width:34ch;color:var(--muted);font-size:15px;line-height:1.4}
 .it-template .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:10px}
 .it-template .chip{padding:2px 11px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--text);background:color-mix(in srgb,var(--sun) 14%,transparent)}
@@ -209,8 +209,9 @@ const CSS = `
 .it-template .stage.dev + .card .row{background:rgba(5,24,34,.4)}
 .it-template .stage.dev + .card .scroll{text-shadow:0 1px 6px rgba(0,20,30,.75)}
 @media (max-width:560px){
-.it-template .switch{top:calc(env(safe-area-inset-top,0px) + 54px)}
-.it-template .bubble{top:calc(env(safe-area-inset-top,0px) + 106px)}
+.it-template .switch{left:auto;right:8px;transform:none;top:calc(env(safe-area-inset-top,0px) + 12px)}
+.it-template .switch button{font-size:11px;padding:4px 8px}
+.it-template .bubble{top:calc(env(safe-area-inset-top,0px) + 54px)}
 }
 @media (min-width:860px){
 .it-template .card{left:auto;top:0;width:var(--panel);max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);box-shadow:-20px 0 60px -24px rgba(0,30,50,.5)}
@@ -306,6 +307,7 @@ export default function ItDevopsTemplate({ user, items }: TemplateProps) {
 
   const d = MODES[lang][mode];
   const ui = UI[lang];
+  const roleLabel = formatRole(user.role?.name);
 
   return (
     <div className="it-template">
@@ -335,7 +337,7 @@ export default function ItDevopsTemplate({ user, items }: TemplateProps) {
         <div className="scroll">
           <section className="who">
             <h1>{user.fullname}</h1>
-            <p className="role">{d.role}</p>
+            <p className="role">{roleLabel}</p>
             <p className="bio">{d.bio}</p>
             {chips.length > 0 && (
               <div className="chips">

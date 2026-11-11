@@ -25,6 +25,9 @@ import type {
   Plan,
   Subscription,
   UserSubscription,
+  MyNotifications,
+  SentNotification,
+  NotificationAudience,
 } from "@/types";
 
 const IMAGE_UPLOAD_TIMEOUT = 60000;
@@ -120,6 +123,27 @@ export const templateApi = {
   mine: () => api.get<ApiResponse<MyTemplates>>("/templates/me"),
   select: (templateId: string) =>
     api.post<ApiResponse<Template>>("/templates/me/select", { templateId }),
+};
+
+export const notificationApi = {
+  mine: (limit = 20) =>
+    api.get<ApiResponse<MyNotifications>>("/notifications/me", {
+      params: { limit },
+    }),
+  markRead: (data: { ids?: string[]; all?: boolean }) =>
+    api.post<ApiResponse<{ updated: number }>>("/notifications/me/read", data),
+  adminList: () =>
+    api.get<ApiResponse<SentNotification[]>>("/notifications/admin"),
+  send: (data: {
+    title: string;
+    body: string;
+    audienceType: NotificationAudience;
+    roleId?: string;
+    userId?: string;
+    sendEmail?: boolean;
+  }) => api.post<ApiResponse<SentNotification>>("/notifications/admin/send", data),
+  remove: (id: string) =>
+    api.post<ApiResponse>("/notifications/admin/delete", { id }),
 };
 
 export const historyApi = {

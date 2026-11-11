@@ -281,3 +281,35 @@ export interface PaymentStatus {
   hasUsedFreeTrial: boolean;
   lastPayment: Payment | null;
 }
+
+export type NotificationAudience = "ALL" | "ROLE" | "USER";
+
+export interface UserNotification {
+  id: string;
+  notificationId: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface MyNotifications {
+  items: UserNotification[];
+  unreadCount: number;
+}
+
+export interface SentNotification {
+  id: string;
+  title: string;
+  body: string;
+  audienceType: NotificationAudience;
+  role?: { id: string; name: string } | null;
+  targetUser?: { id: string; fullname: string; email: string } | null;
+  sendEmail: boolean;
+  skippedCount: number;
+  createdBy?: { id: string; fullname: string } | null;
+  createdAt: string;
+  recipientCount: number;
+  readCount: number;
+  emailCount: number;
+}

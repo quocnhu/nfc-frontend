@@ -1,6 +1,6 @@
 "use client";
 
-import { Layout, Menu, Button, Avatar, Dropdown, Space, Typography, Badge, Spin } from "antd";
+import { Layout, Menu, Button, Avatar, Dropdown, Space, Typography, Badge, Spin, Popover, Empty } from "antd";
 import {
   LogoutOutlined,
   UserOutlined,
@@ -20,15 +20,17 @@ import {
   TranslationOutlined,
   CodeOutlined,
   EnvironmentOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
 import { useAvatar } from "@/components/providers/AvatarProvider";
-import { paymentApi, dashboardApi } from "@/lib/api";
-import type { PaymentStatus } from "@/types";
+import { paymentApi, dashboardApi, notificationApi } from "@/lib/api";
+import type { PaymentStatus, UserNotification } from "@/types";
 import { RouteLoader } from "@/components/common/RouteLoader";
+import { timeAgo } from "@/utils/helpers";
 
 
 const { Header, Sider, Content } = Layout;
@@ -77,6 +79,11 @@ const routeMap: Record<
     label: "History",
     permission: "read:history",
   },
+  "/notifications": {
+    icon: <BellOutlined />,
+    label: "Notifications",
+    permission: "",
+  },
   "/translation": {
     icon: <TranslationOutlined />,
     label: "Translations",
@@ -114,6 +121,10 @@ export function DashboardShell({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -144,6 +155,63 @@ export function DashboardShell({
       }).catch(() => {});
     }
   }, [session]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!session?.user) return;
+    setNotifLoading(true);
+    try {
+      const res = await notificationApi.mine(20);
+      setNotifications(res.data?.data?.items || []);
+      setUnreadCount(res.data?.data?.unreadCount || 0);
+    } catch {
+      // Polling errors are non-fatal; the next tick retries.
+    } finally {
+      setNotifLoading(false);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial bell load mirrors existing app pattern
+    loadNotifications();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    const id = window.setInterval(loadNotifications, 60000);
+    return () => window.clearInterval(id);
+  }, [session, loadNotifications]);
+
+  const handleNotifOpen = (open: boolean) => {
+    setNotifOpen(open);
+    if (open) loadNotifications();
+  };
+
+  const markNotificationRead = async (item: UserNotification) => {
+    if (item.readAt) return;
+    const now = new Date().toISOString();
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === item.id ? { ...n, readAt: now } : n)),
+    );
+    setUnreadCount((count) => Math.max(0, count - 1));
+    try {
+      await notificationApi.markRead({ ids: [item.id] });
+    } catch {
+      loadNotifications();
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    const now = new Date().toISOString();
+    setNotifications((prev) =>
+      prev.map((n) => (n.readAt ? n : { ...n, readAt: now })),
+    );
+    setUnreadCount(0);
+    try {
+      await notificationApi.markRead({ all: true });
+    } catch {
+      loadNotifications();
+    }
+  };
 
   const [permissionsError, setPermissionsError] = useState(false);
   const [permissionsRetry, setPermissionsRetry] = useState(0);
@@ -185,6 +253,9 @@ export function DashboardShell({
     return Object.entries(routeMap)
       .filter(([key, item]) => {
         if (key === "/upgrade") return showUpgrade;
+        if (key === "/notifications") {
+          return (liveAccess?.role || "").toUpperCase() === "ADMIN";
+        }
         return item.permission === "" || permissions.includes(item.permission);
       })
       .map(([key, item]) => ({
@@ -192,13 +263,90 @@ export function DashboardShell({
         icon: item.icon,
         label: item.label,
       }));
-  }, [permissions, showUpgrade]);
+  }, [permissions, showUpgrade, liveAccess?.role]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     await signOut({ redirect: false });
     router.push("/login");
   };
+
+  const notificationContent = (
+    <div style={{ width: 340, maxWidth: "82vw" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          padding: "2px 4px 8px",
+        }}
+      >
+        <Typography.Text strong>Notifications</Typography.Text>
+        {unreadCount > 0 && (
+          <Button type="link" size="small" style={{ padding: 0 }} onClick={markAllNotificationsRead}>
+            Mark all read
+          </Button>
+        )}
+      </div>
+      <div style={{ maxHeight: 360, overflowY: "auto" }}>
+        {notifLoading && notifications.length === 0 ? (
+          <div style={{ display: "grid", placeItems: "center", padding: 24 }}>
+            <Spin />
+          </div>
+        ) : notifications.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="No notifications yet"
+            style={{ margin: "16px 0" }}
+          />
+        ) : (
+          notifications.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => markNotificationRead(item)}
+              style={{
+                display: "flex",
+                gap: 8,
+                padding: "10px 6px",
+                borderTop: isDark ? "1px solid #2e2e40" : "1px solid #f0f0f5",
+                cursor: item.readAt ? "default" : "pointer",
+                background: item.readAt ? "transparent" : isDark ? "rgba(79,70,229,0.14)" : "rgba(79,70,229,0.05)",
+                borderRadius: 6,
+              }}
+            >
+              {!item.readAt && (
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#4f46e5",
+                    marginTop: 6,
+                    flex: "none",
+                  }}
+                />
+              )}
+              <div style={{ minWidth: 0 }}>
+                <Typography.Text strong={!item.readAt} style={{ display: "block" }}>
+                  {item.title}
+                </Typography.Text>
+                <Typography.Text
+                  type="secondary"
+                  style={{ display: "block", fontSize: 12, whiteSpace: "pre-wrap" }}
+                >
+                  {item.body}
+                </Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                  {timeAgo(item.createdAt)}
+                </Typography.Text>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -432,11 +580,31 @@ export function DashboardShell({
           </Space>
 
           <Space size={12}>
+            <Popover
+              content={notificationContent}
+              trigger="click"
+              open={notifOpen}
+              onOpenChange={handleNotifOpen}
+              placement="bottomRight"
+              arrow={false}
+            >
+              <Badge count={unreadCount} size="small" offset={[-2, 2]}>
+                <Button
+                  type="text"
+                  icon={<BellOutlined />}
+                  style={{
+                    fontSize: 16,
+                    color: isDark ? "#a0a0b0" : "#6e6e73",
+                  }}
+                  title="Notifications"
+                />
+              </Badge>
+            </Popover>
             {paymentStatus && !paymentStatus.isActive && paymentStatus.currentSubscription?.plan && paymentStatus.currentSubscription.plan.name !== "FREE" && (
               <Badge dot>
                 <Button
                   type="text"
-                  icon={<BellOutlined />}
+                  icon={<WarningOutlined />}
                   onClick={() => router.push("/upgrade")}
                   style={{
                     fontSize: 16,

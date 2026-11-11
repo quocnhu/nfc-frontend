@@ -94,7 +94,7 @@ const CSS = `
 .ac-template .fold svg{width:22px;height:22px;fill:currentColor;transition:transform .3s}
 .ac-template .card.min .fold svg{transform:rotate(180deg)}
 .ac-template .who{text-align:center}
-.ac-template .co{display:inline-block;padding:2px 12px;border-radius:999px;background:color-mix(in srgb,var(--brand) 22%,transparent);border:1px solid var(--line);font-size:12.5px;font-weight:700;letter-spacing:.2px}
+.ac-template .co{display:inline-block;padding:4px 14px;border-radius:12px;background:color-mix(in srgb,var(--brand) 18%,transparent);border:1px solid color-mix(in srgb,var(--brand) 45%,transparent);color:var(--brand);font-size:12px;font-weight:600;letter-spacing:.5px}
 .ac-template h1{margin-top:6px;font-size:25px;font-weight:800;line-height:1.2}
 .ac-template .role{margin-top:2px;color:var(--gold);font-size:15.5px;font-weight:700}
 .ac-template .bio{margin:7px auto 0;max-width:36ch;color:var(--muted);font-size:14px;line-height:1.5}

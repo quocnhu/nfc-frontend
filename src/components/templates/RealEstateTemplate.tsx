@@ -160,7 +160,7 @@ const CSS = `
 .re-template .who{text-align:center}
 .re-template .co{display:inline-block;padding:2px 12px;border-radius:999px;background:color-mix(in srgb,var(--brand) 22%,transparent);border:1px solid var(--line);font-size:12.5px;font-weight:700;letter-spacing:.2px}
 .re-template h1{margin-top:6px;font-size:25px;font-weight:800;line-height:1.2}
-.re-template .role{margin-top:2px;color:var(--gold);font-size:15.5px;font-weight:700}
+.re-template .role{display:inline-block;margin-top:8px;padding:4px 14px;border-radius:12px;background:color-mix(in srgb,var(--gold) 15%,transparent);border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);color:var(--gold);font-size:12px;font-weight:600;letter-spacing:.5px}
 .re-template .bio{margin:7px auto 0;max-width:36ch;color:var(--muted);font-size:14px;line-height:1.5}
 .re-template .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:10px}
 .re-template .chip{padding:2px 11px;border-radius:999px;border:1px solid var(--line);font-size:12.5px;font-weight:600;background:color-mix(in srgb,var(--brand) 14%,transparent)}

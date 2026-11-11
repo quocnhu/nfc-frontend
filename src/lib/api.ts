@@ -6,6 +6,8 @@ import type {
   Role,
   Permission,
   SharingContent,
+  Template,
+  MyTemplates,
   History,
   DashboardStats,
   RequestCounts,
@@ -112,6 +114,12 @@ export const sharingApi = {
       "/sharing-content/public/user",
       { params: { userId } }
     ),
+};
+
+export const templateApi = {
+  mine: () => api.get<ApiResponse<MyTemplates>>("/templates/me"),
+  select: (templateId: string) =>
+    api.post<ApiResponse<Template>>("/templates/me/select", { templateId }),
 };
 
 export const historyApi = {

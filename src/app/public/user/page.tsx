@@ -5,19 +5,49 @@ import { useSearchParams } from 'next/navigation';
 import { Flex, Spin, Alert } from 'antd';
 import UserTemplate from '@/components/templates/UserTemplate';
 import VipTemplate from '@/components/templates/VipTemplate';
+import RealEstateTemplate from '@/components/templates/RealEstateTemplate';
+import AccountingTemplate from '@/components/templates/AccountingTemplate';
+import LogisticsTemplate from '@/components/templates/LogisticsTemplate';
+import ItDevopsTemplate from '@/components/templates/ItDevopsTemplate';
 
 const BG = '#0a0a0a';
+
+interface PublicProfileItem {
+  id: string;
+  url: string;
+  itemName: string;
+  icon: string;
+  iconUrl?: string;
+}
+
+interface PublicProfile {
+  id: string;
+  fullname: string;
+  email: string;
+  avatarUrl?: string;
+  role?: { id: string; name: string };
+  template?: {
+    id: string;
+    slug: string;
+    name: string;
+    category?: string | null;
+    componentKey: string;
+    thumbnailUrl?: string | null;
+  } | null;
+  sharingContent: PublicProfileItem[];
+}
 
 function PublicUserPageContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derive error from URL param on mount
       setError('No userId provided');
       setLoading(false);
       return;
@@ -34,8 +64,8 @@ function PublicUserPageContent() {
         }
 
         setData(json.data);
-      } catch (err: any) {
-        setError(err.message || 'Something went wrong');
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
       } finally {
         setLoading(false);
       }
@@ -66,7 +96,7 @@ function PublicUserPageContent() {
                 Subscription Expired
               </h1>
               <p style={{ color: '#fff', fontSize: 16, lineHeight: 1.6, marginBottom: 24 }}>
-                This user's NFC service has expired. They need to upgrade their subscription to continue using this service.
+                This user&apos;s NFC service has expired. They need to upgrade their subscription to continue using this service.
               </p>
               <div style={{ 
                 padding: 20, 
@@ -108,13 +138,35 @@ function PublicUserPageContent() {
   const user = { fullname: data.fullname, avatarUrl: data.avatarUrl, email: data.email, role: data.role };
   const items = data.sharingContent || [];
   const roleName = data.role?.name?.toUpperCase();
+  const componentKey = data.template?.componentKey;
 
-  if (roleName === 'VIP') {
+  if (componentKey === 'RealEstateTemplate') {
+    return <RealEstateTemplate user={user} items={items} />;
+  }
+
+  if (componentKey === 'AccountingTemplate') {
+    return <AccountingTemplate user={user} items={items} />;
+  }
+
+  if (componentKey === 'LogisticsTemplate') {
+    return <LogisticsTemplate user={user} items={items} />;
+  }
+
+  if (componentKey === 'ItDevopsTemplate') {
+    return <ItDevopsTemplate user={user} items={items} />;
+  }
+
+  if (componentKey === 'VipTemplate') {
     return <VipTemplate user={user} items={items} />;
   }
 
-  if (roleName === 'COMPANY') {
+  if (componentKey === 'UserTemplate') {
     return <UserTemplate user={user} items={items} />;
+  }
+
+  // Fallback for users without a resolved template: keep the role-based default.
+  if (roleName === 'ADMIN' || roleName === 'LOCAL' || roleName === 'VIP') {
+    return <RealEstateTemplate user={user} items={items} />;
   }
 
   return <UserTemplate user={user} items={items} />;

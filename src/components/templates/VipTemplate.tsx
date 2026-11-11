@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Avatar, Typography, Flex } from "antd";
 import {
   YoutubeOutlined,
@@ -19,6 +19,19 @@ import {
 import { safeUrl } from "@/lib/safe-url";
 
 const { Title, Text } = Typography;
+
+type Lang = "vi" | "en";
+
+const STRINGS = {
+  vi: {
+    welcome: (name: string) => `Chào mừng đến trang của ${name}`,
+    designedBy: "Thiết kế bởi",
+  },
+  en: {
+    welcome: (name: string) => `Welcome to ${name}'s page`,
+    designedBy: "Designed by",
+  },
+};
 
 const COLORS = {
   accent: "255, 176, 32",
@@ -165,6 +178,9 @@ function formatRole(name: string): string {
 }
 
 export default function VipTemplate({ user, items }: Props) {
+  const [lang, setLang] = useState<Lang>("en");
+  const t = STRINGS[lang];
+
   useEffect(() => {
     // Defer confetti loading for better initial performance
     const timer = setTimeout(() => {
@@ -178,6 +194,18 @@ export default function VipTemplate({ user, items }: Props) {
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, position: "relative", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "fixed", top: 16, left: 16, zIndex: 10, display: "flex", gap: 4, padding: 4, borderRadius: 999, background: `rgba(${COLORS.accent}, 0.12)`, border: `1px solid rgba(${COLORS.accent}, 0.35)`, backdropFilter: "blur(8px)" }}>
+        {(["vi", "en"] as const).map((l) => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => setLang(l)}
+            style={{ border: 0, cursor: "pointer", font: "inherit", fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 999, background: lang === l ? `rgb(${COLORS.accent})` : "transparent", color: lang === l ? "#0a0a0a" : COLORS.textSecondary }}
+          >
+            {l.toUpperCase()}
+          </button>
+        ))}
+      </div>
       <style>{`
         @keyframes ripple {
           0% { transform: scale(1); opacity: 0.6; }
@@ -223,7 +251,7 @@ export default function VipTemplate({ user, items }: Props) {
 
       {/* Top: Welcome */}
       <div style={{ position: "relative", zIndex: 1, paddingTop: 16, paddingBottom: 4 }}>
-        <WelcomeTicker text={`Welcome to ${user.fullname}'s page`} />
+        <WelcomeTicker text={t.welcome(user.fullname)} />
       </div>
 
       {/* Center: Avatar + Items */}
@@ -343,7 +371,7 @@ export default function VipTemplate({ user, items }: Props) {
         style={{ textAlign: "center", padding: "20px 0 12px", position: "relative", zIndex: 1, animation: "fadeIn 0.5s ease-out 0.6s backwards" }}
       >
         <Text style={{ color: COLORS.textTertiary, fontSize: 12, letterSpacing: 0.3, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
-          Designed by <span style={{ color: COLORS.textSecondary, fontWeight: 600 }}>Nguyen Quoc Nhu</span> - <span style={{ color: `rgb(${COLORS.accent})`, fontWeight: 500 }}>NFC Tap</span>
+          {t.designedBy} <span style={{ color: COLORS.textSecondary, fontWeight: 600 }}>Nguyen Quoc Nhu</span> - <span style={{ color: `rgb(${COLORS.accent})`, fontWeight: 500 }}>NFC Tap</span>
         </Text>
       </div>
     </div>

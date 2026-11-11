@@ -48,6 +48,27 @@ export interface Permission {
   updatedAt: string;
 }
 
+export interface Template {
+  id: string;
+  slug: string;
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  /** Frontend renderer key, e.g. "RealEstateTemplate". */
+  componentKey: string;
+  thumbnailUrl?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface MyTemplates {
+  role: string;
+  templates: Template[];
+  selectedTemplateId: string | null;
+}
+
 export interface SharingContent {
   id: string;
   userId: string;

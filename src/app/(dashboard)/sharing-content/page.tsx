@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Table, Button, Modal, Form, Input, Space, message, Popconfirm, Typography, AutoComplete, Select, Tooltip, Segmented } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, YoutubeOutlined, TikTokOutlined, FacebookOutlined, InstagramOutlined, LinkedinOutlined, TwitterOutlined, GithubOutlined, GlobalOutlined, MailOutlined, PhoneOutlined, StarOutlined, LinkOutlined as LinkIconOutlined } from "@ant-design/icons";
-import { sharingApi, dashboardApi, userApi, uploadApi } from "@/lib/api";
+import { Table, Button, Modal, Form, Input, Space, message, Popconfirm, Typography, AutoComplete, Select, Tooltip, Segmented, Tag, Empty, Spin } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, YoutubeOutlined, TikTokOutlined, FacebookOutlined, InstagramOutlined, LinkedinOutlined, TwitterOutlined, GithubOutlined, GlobalOutlined, MailOutlined, PhoneOutlined, StarOutlined, LinkOutlined as LinkIconOutlined, AppstoreOutlined, EyeOutlined } from "@ant-design/icons";
+import { sharingApi, dashboardApi, userApi, uploadApi, templateApi } from "@/lib/api";
 import { safeUrl } from "@/lib/safe-url";
+import { getPublicBaseUrl } from "@/lib/public-url";
 import { formatDate } from "@/utils/helpers";
-import type { SharingContent, User } from "@/types";
+import type { SharingContent, User, Template } from "@/types";
 import PhoneInput from "@/components/PhoneInput";
 
 interface IconItem {
@@ -52,6 +53,11 @@ export default function SharingContentPage() {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [urlType, setUrlType] = useState<string>("link");
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [selectingTemplateId, setSelectingTemplateId] = useState<string | null>(null);
 
   const userOptions = useMemo(() =>
     users.map((u) => ({
@@ -107,6 +113,54 @@ export default function SharingContentPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load mirrors existing app pattern
     load();
   }, []);
+
+  const loadTemplates = async () => {
+    setTemplatesLoading(true);
+    try {
+      const res = await templateApi.mine();
+      const data = res.data?.data;
+      setTemplates(data?.templates || []);
+      setSelectedTemplateId(data?.selectedTemplateId ?? null);
+    } catch {
+      messageApi.error("Failed to load templates");
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load mirrors existing app pattern
+    loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial data load only
+  }, []);
+
+  const handleSelectTemplate = async (templateId: string) => {
+    setSelectingTemplateId(templateId);
+    try {
+      await templateApi.select(templateId);
+      setSelectedTemplateId(templateId);
+      messageApi.success("Template selected");
+    } catch (err: unknown) {
+      const responseMsg = (err as { response?: { data?: { message?: unknown } } })
+        ?.response?.data?.message;
+      const msg = typeof responseMsg === "string" ? responseMsg : "Failed to select template";
+      messageApi.error(msg);
+    } finally {
+      setSelectingTemplateId(null);
+    }
+  };
+
+  const handlePreview = () => {
+    if (!currentUserId) {
+      messageApi.warning("User id not available yet");
+      return;
+    }
+    window.open(
+      `${getPublicBaseUrl()}/public/user?userId=${currentUserId}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
 
   const handleCreate = () => {
     setEditingItem(null);
@@ -299,12 +353,28 @@ export default function SharingContentPage() {
   return (
     <>
       {contextHolder}
-      <Space style={{ marginBottom: 16 }}>
+      <Space style={{ marginBottom: 16 }} wrap>
         {canCreate && (
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             Create
           </Button>
         )}
+        <Button
+          icon={<AppstoreOutlined />}
+          onClick={() => {
+            setTemplateModalOpen(true);
+            loadTemplates();
+          }}
+        >
+          Templates
+        </Button>
+        <Button
+          icon={<EyeOutlined />}
+          disabled={!selectedTemplateId}
+          onClick={handlePreview}
+        >
+          Preview
+        </Button>
         {canDelete && selectedRowKeys.length > 0 && (
           <Popconfirm
             title={`Delete ${selectedRowKeys.length} selected item(s)?`}
@@ -418,6 +488,93 @@ export default function SharingContentPage() {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={<span><AppstoreOutlined /> Choose your NFC template</span>}
+        open={templateModalOpen}
+        onCancel={() => setTemplateModalOpen(false)}
+        footer={null}
+        width={760}
+        style={{ maxWidth: "95vw" }}
+      >
+        <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+          Select the template shown when someone taps your NFC card. Only templates
+          available to your role are listed.
+        </Typography.Paragraph>
+
+        {templatesLoading ? (
+          <div style={{ textAlign: "center", padding: 40 }}>
+            <Spin />
+          </div>
+        ) : templates.length === 0 ? (
+          <Empty description="No templates available for your role" />
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gap: 12,
+              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+            }}
+          >
+            {templates.map((template) => {
+              const isSelected = template.id === selectedTemplateId;
+              return (
+                <div
+                  key={template.id}
+                  style={{
+                    position: "relative",
+                    border: isSelected ? "2px solid #1677ff" : "1px solid #d9d9d9",
+                    borderRadius: 12,
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                    minHeight: 170,
+                  }}
+                >
+                  {isSelected && (
+                    <Tag color="blue" style={{ position: "absolute", top: 8, right: 8, margin: 0 }}>
+                      Selected
+                    </Tag>
+                  )}
+                  <Typography.Title level={5} style={{ margin: 0, paddingRight: 70 }}>
+                    {template.name}
+                  </Typography.Title>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {template.category || "General"}
+                  </Typography.Text>
+                  <Typography.Paragraph
+                    type="secondary"
+                    style={{ fontSize: 12, margin: "4px 0 10px", flex: 1 }}
+                    ellipsis={{ rows: 3 }}
+                  >
+                    {template.description || "No description"}
+                  </Typography.Paragraph>
+                  <Button
+                    block
+                    type={isSelected ? "default" : "primary"}
+                    disabled={isSelected}
+                    loading={selectingTemplateId === template.id}
+                    onClick={() => handleSelectTemplate(template.id)}
+                  >
+                    {isSelected ? "Selected" : "Use this template"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div style={{ marginTop: 16, textAlign: "right" }}>
+          <Button
+            icon={<EyeOutlined />}
+            disabled={!selectedTemplateId}
+            onClick={handlePreview}
+          >
+            Preview selected
+          </Button>
+        </div>
       </Modal>
     </>
   );

@@ -151,6 +151,19 @@ const UI: Record<
   },
 };
 
+const TECH_MSGS: Record<Lang, string[]> = {
+  vi: [
+    "Chào bạn! Mình là kỹ thuật viên trực ca, cần kiểm tra gì cứ gọi nhé!",
+    "Hi! Rack đang chạy ổn, mình vừa siết lại cáp nguồn xong.",
+    "Chào nhé! Bạn muốn xem thông số nhiệt độ hay băng thông?",
+  ],
+  en: [
+    "Hi! I'm the on-call technician — call me if you need anything checked!",
+    "Hi! The rack is running fine; I just tightened the power cables.",
+    "Hey! Want to see the temperature or bandwidth stats?",
+  ],
+};
+
 const AV: Record<Mode, string> = {
   guide: `<svg viewBox="0 0 100 100" role="img" aria-label="Avatar hướng dẫn viên"><defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6fd8ff"/><stop offset="1" stop-color="#2ee0c0"/></linearGradient></defs>
 <rect width="100" height="100" fill="url(#ag)"/><path d="M14 100c2-20 16-30 36-30s34 10 36 30z" fill="#ff6b3d"/><path d="M42 72l8 10 8-10z" fill="#fff"/>
@@ -574,11 +587,6 @@ function setupScene(
   tech.rotation.y = TECH_YAW;
   tech.scale.setScalar(1.38);
   devScene.add(tech);
-  const techMsgs = [
-    "Chào bạn! Mình là kỹ thuật viên trực ca, cần kiểm tra gì cứ gọi nhé!",
-    "Hi! Rack đang chạy ổn, mình vừa siết lại cáp nguồn xong.",
-    "Chào nhé! Bạn muốn xem thông số nhiệt độ hay băng thông?",
-  ];
   let techFix = 0;
   let techGreet = 0;
   const tcSkin = M(0xf2c9a5);
@@ -1092,6 +1100,7 @@ function setupScene(
     } else if (modeRef.current === "dev" && near(tech, 0.8, e, 55)) {
       techGreet = 3.4;
       techFix = 0;
+      const techMsgs = TECH_MSGS[langRef.current];
       say(techMsgs[Math.floor(Math.random() * techMsgs.length)]);
     } else if (near(modeRef.current === "dev" ? jet : guide, 0.8, e, 55)) {
       wave = 2.6;

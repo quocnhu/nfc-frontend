@@ -792,6 +792,61 @@ function setupScene(
   mesh(new THREE.PlaneGeometry(0.23, 0.14), neon, 0, 0.085, -0.077, lap).rotation.x = -0.25;
   devParts.forEach((o) => (o.visible = false));
 
+  const TOUR_GAP = 0.24;
+  const TOUR_RAD = [-0.05, 0.07, -0.09, 0.05, -0.02];
+  const touristLooks: any[] = [
+    { shirt: 0x2fd1c5, pants: 0x2e4a8a, skin: 0xf2c9a5, hat: "sun", hatColor: 0xffc83d, pack: 0xff6b4a, scale: 1.38 },
+    { shirt: 0xffb03a, pants: 0x444a55, skin: 0xd9a06f, hat: "cap", hatColor: 0x2f7bff, pack: 0x2fd1c5, scale: 1.32 },
+    { shirt: 0x7a5cff, pants: 0x2e7d5b, skin: 0xc68642, hat: "none", hair: 0x2a1a12, pack: 0xffb03a, scale: 1.42 },
+    { shirt: 0xff6b4a, pants: 0x6a4a2a, skin: 0xf6d7b0, hat: "sun", hatColor: 0xffffff, pack: 0x7a5cff, scale: 1.3 },
+    { shirt: 0x46b0ff, pants: 0x33406a, skin: 0xe0aa7c, hat: "cap", hatColor: 0xff6b4a, pack: 0x2fd1c5, scale: 1.36 },
+  ];
+  function makeTourist(look: any) {
+    const g = new THREE.Group();
+    g.scale.setScalar(look.scale);
+    scene.add(g);
+    const skinM = M(look.skin);
+    const shirtM = M(look.shirt);
+    const pantsM = M(look.pants);
+    const darkM = M(0x1b1410, { roughness: 0.4 });
+    const hatM = M(look.hatColor || look.shirt, { roughness: 0.7 });
+    const legs = [-1, 1].map((s) => {
+      const lg = new THREE.Group();
+      lg.position.set(s * 0.06, 0.36, 0);
+      g.add(lg);
+      mesh(new THREE.CylinderGeometry(0.05, 0.045, 0.34, 8), pantsM, 0, -0.17, 0, lg);
+      mesh(new THREE.SphereGeometry(0.065, 8, 6), darkM, 0, -0.35, 0.03, lg).scale.set(1, 0.55, 1.35);
+      return lg;
+    });
+    mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.34, 14), shirtM, 0, 0.53, 0, g);
+    mesh(new THREE.BoxGeometry(0.2, 0.24, 0.12), M(look.pack, { roughness: 0.85 }), 0, 0.55, -0.16, g);
+    mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.09, 8), skinM, 0, 0.72, 0, g);
+    mesh(new THREE.SphereGeometry(0.12, 16, 12), skinM, 0, 0.83, 0, g);
+    [-1, 1].forEach((s) => mesh(new THREE.SphereGeometry(0.016, 6, 6), darkM, s * 0.045, 0.84, 0.108, g));
+    if (look.hat === "cap") {
+      mesh(new THREE.SphereGeometry(0.125, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), hatM, 0, 0.85, 0, g);
+      mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.012, 18), hatM, 0, 0.855, 0.085, g).scale.set(1, 1, 0.72);
+    } else if (look.hat === "sun") {
+      mesh(new THREE.CylinderGeometry(0.205, 0.205, 0.012, 22), hatM, 0, 0.865, 0, g);
+      mesh(new THREE.SphereGeometry(0.115, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), hatM, 0, 0.865, 0, g);
+      mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.02, 18), M(0xe5483a, { roughness: 0.7 }), 0, 0.876, 0, g);
+    } else {
+      mesh(new THREE.SphereGeometry(0.123, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), M(look.hair || 0x2a1a12, { roughness: 0.9 }), 0, 0.842, -0.005, g);
+    }
+    const arms = [-1, 1].map((s) => {
+      const ag = new THREE.Group();
+      ag.position.set(s * 0.18, 0.66, 0);
+      g.add(ag);
+      mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.26, 8), shirtM, 0, -0.13, 0, ag);
+      mesh(new THREE.SphereGeometry(0.045, 8, 8), skinM, 0, -0.28, 0, ag);
+      return ag;
+    });
+    const sh = mesh(new THREE.CircleGeometry(0.17, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18 }), 0, 0.012, 0, g);
+    sh.rotation.x = -Math.PI / 2;
+    return { group: g, legs, arms };
+  }
+  const tourists = touristLooks.map(makeTourist);
+
   const JS = 2.6;
   const jet = new THREE.Group();
   jet.scale.setScalar(JS);
@@ -1099,6 +1154,7 @@ function setupScene(
     devParts.forEach((o) => (o.visible = m === "dev"));
     guide.visible = m === "guide";
     jet.visible = m === "dev";
+    tourists.forEach((tr) => (tr.group.visible = m === "guide"));
     tourOnly.forEach((o) => (o.visible = m === "guide"));
     devScene.visible = m === "dev";
     props.forEach((s, i) => drawEmoji(s, D.props[i]));
@@ -1158,6 +1214,24 @@ function setupScene(
     gR.rotation.z += (tz - gR.rotation.z) * Math.min(1, dt * 10);
     flag.rotation.y = Math.sin(t * 6) * 0.35;
     shadow.position.set(guide.position.x, 0.012, guide.position.z);
+    tourists.forEach((tr, i) => {
+      if (!tr.group.visible) return;
+      const a = ang - TOUR_GAP * (i + 1);
+      const rad = RP + TOUR_RAD[i];
+      const bob = walking ? Math.abs(Math.sin(phase - i * 1.3)) * 0.028 : 0;
+      tr.group.position.set(Math.cos(a) * rad, bob, Math.sin(a) * rad);
+      const face = walking
+        ? Math.atan2(-Math.sin(a), Math.cos(a))
+        : Math.atan2(guide.position.x - tr.group.position.x, guide.position.z - tr.group.position.z);
+      let td = face - tr.group.rotation.y;
+      td = Math.atan2(Math.sin(td), Math.cos(td));
+      tr.group.rotation.y += td * Math.min(1, dt * 6);
+      const tsw = walking ? Math.sin(phase - i * 1.3) : Math.sin(phase * 0.3 + i) * 0.05;
+      tr.legs[0].rotation.x += (tsw * 0.7 - tr.legs[0].rotation.x) * Math.min(1, dt * 14);
+      tr.legs[1].rotation.x += (-tsw * 0.7 - tr.legs[1].rotation.x) * Math.min(1, dt * 14);
+      tr.arms[0].rotation.x += (-tsw * 0.55 - tr.arms[0].rotation.x) * Math.min(1, dt * 14);
+      tr.arms[1].rotation.x += (tsw * 0.55 - tr.arms[1].rotation.x) * Math.min(1, dt * 14);
+    });
     if (jet.visible) {
       const stopped = wave > 0 || pauseT > 0;
       pauseT = Math.max(0, pauseT - dt);

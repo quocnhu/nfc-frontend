@@ -1,13 +1,16 @@
 "use client";
 
 import { SessionProvider, useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 
 function AuthLoader({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
+  const pathname = usePathname();
+  const isPublicProfile = pathname?.startsWith("/public/");
 
-  if (status === "loading") {
+  if (status === "loading" && !isPublicProfile) {
     return (
       <div style={{
         display: "flex",

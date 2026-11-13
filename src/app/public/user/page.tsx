@@ -179,13 +179,7 @@ function PublicUserPageContent() {
 
 export default function PublicUserPage() {
   return (
-    <Suspense
-      fallback={
-        <Flex justify="center" align="center" style={{ height: '100vh', width: '100vw', background: BG, position: 'fixed', top: 0, left: 0, zIndex: 9999 }}>
-          <Spin size="large" style={{ fontSize: 48 }} />
-        </Flex>
-      }
-    >
+    <Suspense fallback={null}>
       <PublicUserPageContent />
     </Suspense>
   );

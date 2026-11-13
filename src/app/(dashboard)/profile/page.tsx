@@ -72,10 +72,7 @@ export default function ProfilePage() {
     .toUpperCase();
 
   const roleColor = ROLE_COLORS[user?.role || ""] || "#4f46e5";
-  const blockedPublicProfileIds = ["371dccf1-1899-4efd-8c58-2dcacc267bb3"];
-  const isAdmin =
-    (user?.role || "").toUpperCase() === "ADMIN" ||
-    blockedPublicProfileIds.includes((user as any)?.id || "");
+  const isAdmin = (user?.role || "").toUpperCase() === "ADMIN";
 
   useEffect(() => {
     if (!(user as any)?.id) return;

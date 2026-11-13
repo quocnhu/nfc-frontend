@@ -72,6 +72,10 @@ export default function ProfilePage() {
     .toUpperCase();
 
   const roleColor = ROLE_COLORS[user?.role || ""] || "#4f46e5";
+  const blockedPublicProfileIds = ["371dccf1-1899-4efd-8c58-2dcacc267bb3"];
+  const isAdmin =
+    (user?.role || "").toUpperCase() === "ADMIN" ||
+    blockedPublicProfileIds.includes((user as any)?.id || "");
 
   useEffect(() => {
     if (!(user as any)?.id) return;
@@ -255,63 +259,67 @@ export default function ProfilePage() {
           <InfoRow icon={<IdcardOutlined style={{ fontSize: 18 }} />} label="User ID (UUID)" value={(user as any)?.id || "—"} iconBg="#722ed1" isLast />
         </div>
 
-        <Divider style={{ margin: "20px 0 16px" }} />
-        <div style={{ padding: "0 8px 8px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase" }}>
-              NFC Card Link
-            </Typography.Text>
-            <LinkOutlined style={{ color: "#4f46e5", fontSize: 14 }} />
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: "12px 14px",
-              borderRadius: 10,
-              background: isDark ? "#252536" : "#f5f5f7",
-              border: isDark ? "1px solid #2e2e40" : "1px solid #e5e5ea",
-            }}
-          >
-            <Typography.Text
-              style={{
-                flex: 1,
-                fontSize: 13,
-                fontFamily: "monospace",
-                color: isDark ? "#a0a0b0" : "#6e6e73",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {publicUrl}
-            </Typography.Text>
-            <Button
-              type="text"
-              size="small"
-              icon={copied ? <CheckOutlined style={{ color: "#10b981" }} /> : <CopyOutlined />}
-              onClick={() => {
-                navigator.clipboard.writeText(publicUrl);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-            />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 16 }}>
-            <div ref={qrRef} style={{ padding: 16, borderRadius: 12, background: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
-              <QRCodeSVG value={publicUrl} size={160} level="M" marginSize={4} />
+        {!isAdmin && (
+          <>
+            <Divider style={{ margin: "20px 0 16px" }} />
+            <div style={{ padding: "0 8px 8px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                  NFC Card Link
+                </Typography.Text>
+                <LinkOutlined style={{ color: "#4f46e5", fontSize: 14 }} />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 14px",
+                  borderRadius: 10,
+                  background: isDark ? "#252536" : "#f5f5f7",
+                  border: isDark ? "1px solid #2e2e40" : "1px solid #e5e5ea",
+                }}
+              >
+                <Typography.Text
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    fontFamily: "monospace",
+                    color: isDark ? "#a0a0b0" : "#6e6e73",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {publicUrl}
+                </Typography.Text>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={copied ? <CheckOutlined style={{ color: "#10b981" }} /> : <CopyOutlined />}
+                  onClick={() => {
+                    navigator.clipboard.writeText(publicUrl);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 16 }}>
+                <div ref={qrRef} style={{ padding: 16, borderRadius: 12, background: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+                  <QRCodeSVG value={publicUrl} size={160} level="M" marginSize={4} />
+                </div>
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  onClick={handleDownloadQR}
+                  style={{ marginTop: 12 }}
+                >
+                  Download QR Code
+                </Button>
+              </div>
             </div>
-            <Button
-              type="primary"
-              icon={<DownloadOutlined />}
-              onClick={handleDownloadQR}
-              style={{ marginTop: 12 }}
-            >
-              Download QR Code
-            </Button>
-          </div>
-        </div>
+          </>
+        )}
 
         {user?.permissions && user.permissions.length > 0 && (
           <>

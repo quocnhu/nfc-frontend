@@ -9,6 +9,7 @@ import RealEstateTemplate from '@/components/templates/RealEstateTemplate';
 import AccountingTemplate from '@/components/templates/AccountingTemplate';
 import LogisticsTemplate from '@/components/templates/LogisticsTemplate';
 import ItDevopsTemplate from '@/components/templates/ItDevopsTemplate';
+import SpeakerTemplate from '@/components/templates/SpeakerTemplate';
 
 const BG = '#0a0a0a';
 
@@ -154,6 +155,10 @@ function PublicUserPageContent() {
 
   if (componentKey === 'ItDevopsTemplate') {
     return <ItDevopsTemplate user={user} items={items} />;
+  }
+
+  if (componentKey === 'SpeakerTemplate') {
+    return <SpeakerTemplate user={user} items={items} />;
   }
 
   if (componentKey === 'VipTemplate') {

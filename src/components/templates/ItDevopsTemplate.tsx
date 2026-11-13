@@ -424,10 +424,12 @@ function setupScene(
   rock.rotation.x = Math.PI;
   const path = mesh(new THREE.RingGeometry(2.1, 2.5, 64), M(0xe9cf8e, { side: THREE.DoubleSide }), 0, 0.006, 0);
   path.rotation.x = -Math.PI / 2;
-  mesh(new THREE.ConeGeometry(1.05, 2.0, 7), flat(0x77906a), 0, 1.0, 0);
-  mesh(new THREE.ConeGeometry(0.38, 0.7, 7), flat(0xffffff), 0, 1.78, 0);
-  mesh(new THREE.ConeGeometry(0.7, 1.2, 7), flat(0x86a276), 0.85, 0.6, -0.35);
-  mesh(new THREE.ConeGeometry(0.55, 0.9, 7), flat(0x6f8a62), -0.8, 0.45, 0.45);
+  const mountain = new THREE.Group();
+  scene.add(mountain);
+  mesh(new THREE.ConeGeometry(1.05, 2.0, 7), flat(0x77906a), 0, 1.0, 0, mountain);
+  mesh(new THREE.ConeGeometry(0.38, 0.7, 7), flat(0xffffff), 0, 1.78, 0, mountain);
+  mesh(new THREE.ConeGeometry(0.7, 1.2, 7), flat(0x86a276), 0.85, 0.6, -0.35, mountain);
+  mesh(new THREE.ConeGeometry(0.55, 0.9, 7), flat(0x6f8a62), -0.8, 0.45, 0.45, mountain);
 
   function palm(x: number, z: number, s: number, lean: number) {
     const g = new THREE.Group();
@@ -486,16 +488,16 @@ function setupScene(
   const devScene = new THREE.Group();
   devScene.visible = false;
   scene.add(devScene);
-  const tourOnly = [tent, plane];
+  const tourOnly = [tent, plane, mountain];
   const leds: any[] = [];
   const pipe: any[] = [];
   const tourParts: any[] = [];
   const devParts: any[] = [];
 
-  function rack(x: number, z: number) {
+  function rack(x: number, z: number, ry?: number, y?: number) {
     const g = new THREE.Group();
-    g.position.set(x, 0, z);
-    g.rotation.y = Math.atan2(-x, -z);
+    g.position.set(x, y || 0, z);
+    g.rotation.y = ry === undefined ? Math.atan2(-x, -z) : ry;
     devScene.add(g);
     mesh(new THREE.BoxGeometry(0.5, 1.1, 0.42), M(0x20243a, { roughness: 0.5, metalness: 0.4 }), 0, 0.55, 0, g);
     for (let i = 0; i < 5; i++) {
@@ -511,10 +513,146 @@ function setupScene(
       led.userData.ph = i * 1.3 + x;
       leds.push(led);
     }
+    return g;
   }
   rack(2.95, -0.9);
   rack(2.7, -1.6);
   rack(-2.9, -1.4);
+
+  const dc = new THREE.Group();
+  devScene.add(dc);
+  const dcTop = 0.14;
+  mesh(new THREE.CylinderGeometry(1.3, 1.42, 0.16, 10), M(0x151b28, { roughness: 0.45, metalness: 0.65 }), 0, 0.04, 0, dc);
+  mesh(new THREE.CylinderGeometry(1.14, 1.2, 0.035, 10), M(0x0c111b, { roughness: 0.35, metalness: 0.8 }), 0, 0.125, 0, dc);
+  const dcRing = mesh(
+    new THREE.TorusGeometry(1.32, 0.022, 8, 72),
+    new THREE.MeshStandardMaterial({ color: 0x1fb5c9, emissive: 0x1fb5c9, emissiveIntensity: 1.1 }),
+    0,
+    0.13,
+    0,
+    dc,
+  );
+  dcRing.rotation.x = Math.PI / 2;
+  const dcRacks = [rack(-0.64, -0.46, 0, dcTop), rack(0, -0.46, 0, dcTop), rack(0.64, -0.46, 0, dcTop)];
+  dcRacks.forEach((r) => r.scale.setScalar(1.2));
+  mesh(new THREE.BoxGeometry(2.0, 0.05, 0.3), M(0x2a3346, { roughness: 0.4, metalness: 0.7 }), 0, 1.46, -0.46, dc);
+  mesh(
+    new THREE.BoxGeometry(1.9, 0.014, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0x35d6ff, emissive: 0x35d6ff, emissiveIntensity: 1.2 }),
+    0,
+    1.43,
+    -0.31,
+    dc,
+  );
+  const cooler = new THREE.Group();
+  cooler.position.set(-1.0, dcTop, -0.05);
+  cooler.rotation.y = 0.25;
+  dc.add(cooler);
+  mesh(new THREE.BoxGeometry(0.34, 0.9, 0.42), M(0x20283a, { roughness: 0.45, metalness: 0.6 }), 0, 0.45, 0, cooler);
+  for (let i = 0; i < 4; i++) mesh(new THREE.BoxGeometry(0.24, 0.045, 0.02), M(0x0b0f17, { roughness: 0.9 }), 0, 0.25 + i * 0.16, 0.215, cooler);
+  const coolerLed = mesh(
+    new THREE.BoxGeometry(0.12, 0.02, 0.02),
+    new THREE.MeshStandardMaterial({ color: 0x35ffb0, emissive: 0x35ffb0, emissiveIntensity: 1 }),
+    0,
+    0.82,
+    0.216,
+    cooler,
+  );
+  const dcHolo = mesh(
+    new THREE.TorusGeometry(0.5, 0.012, 8, 48),
+    new THREE.MeshBasicMaterial({ color: 0x6fe8ff, transparent: true, opacity: 0.55 }),
+    0,
+    1.9,
+    -0.3,
+    dc,
+  );
+  dcHolo.rotation.x = Math.PI / 2.3;
+
+  const TECH_YAW = Math.PI + 0.22;
+  const tech = new THREE.Group();
+  tech.position.set(0.82, dcTop, 0.34);
+  tech.rotation.y = TECH_YAW;
+  tech.scale.setScalar(1.38);
+  devScene.add(tech);
+  const techMsgs = [
+    "Chào bạn! Mình là kỹ thuật viên trực ca, cần kiểm tra gì cứ gọi nhé!",
+    "Hi! Rack đang chạy ổn, mình vừa siết lại cáp nguồn xong.",
+    "Chào nhé! Bạn muốn xem thông số nhiệt độ hay băng thông?",
+  ];
+  let techFix = 0;
+  let techGreet = 0;
+  const tcSkin = M(0xf2c9a5);
+  const tcShirt = M(0x2f8a8a);
+  const tcPants = M(0x263445);
+  const tcDark = M(0x10151d, { roughness: 0.45 });
+  const tcVest = M(0xffc83d, { roughness: 0.65 });
+  mesh(
+    new THREE.CircleGeometry(0.34, 18),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false }),
+    0,
+    0.012,
+    0,
+    tech,
+  ).rotation.x = -Math.PI / 2;
+  [-1, 1].forEach((s) => {
+    const g = new THREE.Group();
+    g.position.set(s * 0.06, 0.36, 0);
+    tech.add(g);
+    mesh(new THREE.CylinderGeometry(0.052, 0.048, 0.34, 8), tcPants, 0, -0.17, 0, g);
+    mesh(new THREE.SphereGeometry(0.07, 8, 6), tcDark, 0, -0.35, 0.03, g).scale.set(1, 0.5, 1.35);
+  });
+  mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.35, 14), tcShirt, 0, 0.535, 0, tech);
+  [-1, 1].forEach((s) => mesh(new THREE.BoxGeometry(0.03, 0.22, 0.27), tcVest, s * 0.145, 0.55, 0, tech));
+  mesh(new THREE.BoxGeometry(0.22, 0.22, 0.032), tcVest, 0, 0.55, 0.131, tech);
+  mesh(new THREE.BoxGeometry(0.22, 0.22, 0.032), tcVest, 0, 0.55, -0.131, tech);
+  [-1, 1].forEach((s) => mesh(new THREE.BoxGeometry(0.225, 0.022, 0.034), M(0xe8eef8), 0, 0.575, s * 0.132, tech));
+  mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.1, 8), tcSkin, 0, 0.725, 0, tech);
+  const tcHead = new THREE.Group();
+  tcHead.position.set(0, 0.835, 0);
+  tech.add(tcHead);
+  mesh(new THREE.SphereGeometry(0.12, 16, 12), tcSkin, 0, 0, 0, tcHead);
+  [-1, 1].forEach((s) => mesh(new THREE.SphereGeometry(0.017, 6, 6), tcDark, s * 0.045, 0.012, 0.106, tcHead));
+  mesh(new THREE.SphereGeometry(0.128, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), tcVest, 0, 0.028, 0, tcHead);
+  mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.012, 20), tcVest, 0, 0.032, 0.015, tcHead).scale.set(1, 1, 0.86);
+  const tcArms = [-1, 1].map((s) => {
+    const g = new THREE.Group();
+    g.position.set(s * 0.18, 0.66, 0);
+    tech.add(g);
+    mesh(new THREE.CylinderGeometry(0.04, 0.034, 0.26, 8), tcShirt, 0, -0.13, 0, g);
+    mesh(new THREE.SphereGeometry(0.044, 8, 8), tcSkin, 0, -0.275, 0, g);
+    return g;
+  });
+  const tcTablet = new THREE.Group();
+  tcTablet.position.set(0, -0.28, 0.07);
+  tcArms[0].add(tcTablet);
+  mesh(new THREE.BoxGeometry(0.2, 0.14, 0.016), M(0x0d121a, { roughness: 0.35, metalness: 0.6 }), 0, 0, 0, tcTablet);
+  const tcScreen = mesh(
+    new THREE.PlaneGeometry(0.17, 0.105),
+    new THREE.MeshBasicMaterial({ color: 0x6fe8ff, transparent: true, opacity: 0.9 }),
+    0,
+    0,
+    0.009,
+    tcTablet,
+  );
+  const tcTool = new THREE.Group();
+  tcTool.position.set(0, -0.275, 0.02);
+  tcArms[1].add(tcTool);
+  mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.26, 6), M(0xc8cfd8, { roughness: 0.25, metalness: 0.85 }), 0, 0, 0.12, tcTool).rotation.x = Math.PI / 2;
+  mesh(new THREE.BoxGeometry(0.05, 0.028, 0.02), M(0xff8a4a, { roughness: 0.4, metalness: 0.3 }), 0, 0, 0.258, tcTool);
+  const tcSpark = mesh(
+    new THREE.SphereGeometry(0.045, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0 }),
+    0,
+    -0.3,
+    0.15,
+    tcArms[1],
+  );
+  const tcBox = new THREE.Group();
+  tcBox.position.set(0.34, 0.02, 0.26);
+  tcBox.rotation.y = -0.4;
+  tech.add(tcBox);
+  mesh(new THREE.BoxGeometry(0.24, 0.16, 0.14), M(0xc23a2e, { roughness: 0.5, metalness: 0.3 }), 0, 0.08, 0, tcBox);
+  mesh(new THREE.BoxGeometry(0.2, 0.012, 0.04), M(0x8f2118), 0, 0.165, 0, tcBox);
   [[0x1fb5c9, 0.15, 0], [0xff8a4a, 0.45, 0.2], [0x7a5cff, 0.75, -0.15]].forEach(([c, y, r]: any) => {
     const b = mesh(new THREE.BoxGeometry(0.8, 0.3, 0.34), M(c, { roughness: 0.5 }), -2.9, y, 1.2, devScene);
     b.rotation.y = r + 0.3;
@@ -896,6 +1034,10 @@ function setupScene(
       prop.object.userData.pulse = 1;
       const T = MODES[langRef.current][modeRef.current].tips;
       say(T[tipI++ % T.length]);
+    } else if (modeRef.current === "dev" && near(tech, 0.8, e, 55)) {
+      techGreet = 3.4;
+      techFix = 0;
+      say(techMsgs[Math.floor(Math.random() * techMsgs.length)]);
     } else if (near(modeRef.current === "dev" ? jet : guide, 0.8, e, 55)) {
       wave = 2.6;
       const G = MODES[langRef.current][modeRef.current].msgs(infoRef.current.name);
@@ -908,7 +1050,13 @@ function setupScene(
   };
   const onPointerMove = (e: PointerEvent) => {
     cv.style.cursor =
-      pickItem(e) || pickProp(e) || near(modeRef.current === "dev" ? jet : guide, 0.8, e, 55) || near(plane, 0, e, 45) ? "pointer" : "default";
+      pickItem(e) ||
+      pickProp(e) ||
+      (modeRef.current === "dev" && near(tech, 0.8, e, 55)) ||
+      near(modeRef.current === "dev" ? jet : guide, 0.8, e, 55) ||
+      near(plane, 0, e, 45)
+        ? "pointer"
+        : "default";
     if (down) camTarget = Math.max(-1.4, Math.min(1.4, (e.clientX - down.x) * 0.01));
   };
   const resetPointer = () => {
@@ -1088,6 +1236,39 @@ function setupScene(
         p.rotation.y = t * 2;
         p.material.emissiveIntensity = 0.4 + (Math.sin(t * 3 - i) > 0.5 ? 1.2 : 0);
       });
+      techFix = Math.max(0, techFix - dt);
+      techGreet = Math.max(0, techGreet - dt);
+      const greeting = techGreet > 0;
+      const fixing = techFix > 0 && !greeting;
+      const techWant = greeting
+        ? Math.atan2(cam.position.x - tech.position.x, cam.position.z - tech.position.z)
+        : TECH_YAW;
+      let tdy = techWant - tech.rotation.y;
+      tdy = Math.atan2(Math.sin(tdy), Math.cos(tdy));
+      tech.rotation.y += tdy * Math.min(1, dt * (greeting ? 8 : 4));
+      tech.position.y +=
+        ((greeting ? dcTop + Math.abs(Math.sin(t * 7)) * 0.04 : dcTop) - tech.position.y) * Math.min(1, dt * 10);
+      tcTool.visible = !greeting;
+      if (greeting) {
+        tcArms[1].rotation.z += (1.95 + Math.sin(t * 13) * 0.42 - tcArms[1].rotation.z) * Math.min(1, dt * 14);
+        tcArms[1].rotation.x += (-0.12 - tcArms[1].rotation.x) * Math.min(1, dt * 14);
+        tcArms[0].rotation.x += (-0.4 - tcArms[0].rotation.x) * Math.min(1, dt * 10);
+        tcHead.rotation.x = Math.sin(t * 7) * 0.05;
+        tcHead.rotation.y = Math.sin(t * 2.2) * 0.08;
+        tcSpark.material.opacity = 0;
+      } else {
+        tcArms[1].rotation.z += (0 - tcArms[1].rotation.z) * Math.min(1, dt * 10);
+        tcArms[1].rotation.x +=
+          (-0.42 + Math.sin(t * (fixing ? 13 : 2.4)) * (fixing ? 0.42 : 0.07) - tcArms[1].rotation.x) * Math.min(1, dt * 12);
+        tcArms[0].rotation.x += (-0.62 + Math.sin(t * 1.6) * 0.05 - tcArms[0].rotation.x) * Math.min(1, dt * 8);
+        tcHead.rotation.x = Math.sin(t * (fixing ? 7 : 1.4)) * (fixing ? 0.14 : 0.05);
+        tcHead.rotation.y = Math.sin(t * (fixing ? 4 : 0.8)) * (fixing ? 0.18 : 0.1);
+        tcSpark.material.opacity = fixing ? Math.max(0, Math.sin(t * 22)) * 0.9 : 0;
+      }
+      tcScreen.material.opacity = 0.55 + (Math.sin(t * 4) > 0.3 ? 0.4 : 0.1);
+      dcHolo.rotation.z += dt * (fixing ? 1.6 : 0.7);
+      dcHolo.position.y = 1.9 + Math.sin(t * 1.5) * 0.05;
+      coolerLed.material.emissiveIntensity = Math.sin(t * 3) > 0.5 ? 1.8 : 0.5;
     }
     popT = Math.max(0, popT - dt * 2.2);
     guide.scale.setScalar(1.55 * (1 + Math.sin(popT * Math.PI) * 0.25));

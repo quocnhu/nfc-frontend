@@ -1,21 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Table, Button, Modal, Form, Input, Select, Space, Tabs, message,
   Popconfirm, Tag, Checkbox, Typography, Divider, Upload, Avatar,
-  Slider, Switch, Tooltip,
+  Slider, Switch, Tooltip, DatePicker,
 } from "antd";
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined,
   SafetyOutlined, UserOutlined,
   CameraOutlined, CheckCircleOutlined, CloseCircleOutlined, PictureOutlined, ScissorOutlined,
   RotateLeftOutlined, RotateRightOutlined, UnlockOutlined, StopOutlined, ClockCircleOutlined,
-  CrownOutlined,
+  CrownOutlined, FileTextOutlined, DownloadOutlined,
 } from "@ant-design/icons";
 import dynamic from "next/dynamic";
+import type { Dayjs } from "dayjs";
 import { userApi, roleApi, permissionApi, dashboardApi, userdataApi, paymentApi } from "@/lib/api";
 import { getCroppedImg } from "@/lib/cropImage";
+import { getPublicBaseUrl } from "@/lib/public-url";
 import { useAvatarSync } from "@/hooks/useAvatarSync";
 import type { User, Role, Permission } from "@/types";
 
@@ -80,6 +82,13 @@ export default function UsersPage() {
   const [permsPagination, setPermsPagination] = useState({ current: 1, pageSize: 10 });
   const [bulkSelectedUserIds, setBulkSelectedUserIds] = useState<string[]>([]);
   const [bulkSelectedRoleIds, setBulkSelectedRoleIds] = useState<string[]>([]);
+
+  // NFC bulk export modal
+  const [nfcModalOpen, setNfcModalOpen] = useState(false);
+  const [nfcUsers, setNfcUsers] = useState<User[]>([]);
+  const [nfcUserIds, setNfcUserIds] = useState<string[]>([]);
+  const [nfcDateRange, setNfcDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [nfcLoading, setNfcLoading] = useState(false);
 
   const getErrorMessage = (err: any): string => {
     const data = err?.response?.data;
@@ -227,6 +236,90 @@ export default function UsersPage() {
     } catch (err: any) {
       messageApi.error(getErrorMessage(err));
     }
+  };
+
+  // ─── NFC bulk export ───
+
+  const loadNfcUsers = async () => {
+    setNfcLoading(true);
+    try {
+      const first = await userApi.list({ page: 1, limit: 100 });
+      const payload = first.data?.data;
+      const totalPages = payload?.meta?.totalPages || 1;
+      let all: User[] = payload?.data || [];
+
+      if (totalPages > 1) {
+        const pages = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, i) => userApi.list({ page: i + 2, limit: 100 }))
+        );
+        for (const res of pages) {
+          all = all.concat(res.data?.data?.data || []);
+        }
+      }
+
+      setNfcUsers(all);
+    } catch (err) {
+      messageApi.error(getErrorMessage(err));
+      setNfcUsers([]);
+    } finally {
+      setNfcLoading(false);
+    }
+  };
+
+  const handleOpenNfcModal = () => {
+    setNfcModalOpen(true);
+    loadNfcUsers();
+  };
+
+  const nfcFilteredByDate = useMemo(() => {
+    const from = nfcDateRange?.[0]?.startOf("day")?.valueOf();
+    const to = nfcDateRange?.[1]?.endOf("day")?.valueOf();
+    if (!from && !to) return nfcUsers;
+
+    return nfcUsers.filter((u) => {
+      const created = u.createdAt ? new Date(u.createdAt).getTime() : NaN;
+      if (Number.isNaN(created)) return false;
+      return (!from || created >= from) && (!to || created <= to);
+    });
+  }, [nfcUsers, nfcDateRange]);
+
+  const nfcTargetUsers = useMemo(() => {
+    if (nfcUserIds.length > 0) return nfcUsers.filter((u) => nfcUserIds.includes(u.id));
+    return nfcFilteredByDate;
+  }, [nfcUsers, nfcUserIds, nfcFilteredByDate]);
+
+  const nfcUrls = useMemo(() => {
+    const base = getPublicBaseUrl();
+    return nfcTargetUsers.map((u) => `${base}/public/user?userId=${u.id}`);
+  }, [nfcTargetUsers]);
+
+  const nfcCsvText = useMemo(() => {
+    const cell = (value: string) => (/[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
+    return ["url", ...nfcUrls].map(cell).join("\n");
+  }, [nfcUrls]);
+
+  const handleCopyNfcList = async () => {
+    if (!nfcUrls.length) return;
+    try {
+      await navigator.clipboard.writeText(nfcCsvText);
+      messageApi.success(`Copied ${nfcUrls.length} link(s)`);
+    } catch {
+      messageApi.error("Could not copy the list");
+    }
+  };
+
+  const handleDownloadNfcList = () => {
+    if (!nfcUrls.length) return;
+    const blob = new Blob([`${nfcCsvText}\n`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `nfc-bulk-list-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    messageApi.success(`Exported ${nfcUrls.length} link(s) as CSV`);
   };
 
   const handleUnlockUser = async (user: User) => {
@@ -756,6 +849,11 @@ export default function UsersPage() {
                       Create User
                     </Button>
                   )}
+                  {hasReadAll && (
+                    <Button icon={<FileTextOutlined />} onClick={handleOpenNfcModal}>
+                      NFC Bulk List
+                    </Button>
+                  )}
                   {hasReadAll && bulkSelectedUserIds.length > 0 && (
                     <Popconfirm
                       title={`Delete ${bulkSelectedUserIds.length} selected user(s)?`}
@@ -1220,6 +1318,74 @@ loading={loadingRoles}
             );
           })}
         </div>
+      </Modal>
+
+      {/* ─── NFC Bulk List Modal ─── */}
+      <Modal
+        title={<Space><FileTextOutlined /> NFC Bulk List</Space>}
+        open={nfcModalOpen}
+        onCancel={() => setNfcModalOpen(false)}
+        width={720}
+        style={{ maxWidth: '95vw' }}
+        footer={[
+          <Button key="close" onClick={() => setNfcModalOpen(false)}>Close</Button>,
+          <Button key="copy" disabled={!nfcUrls.length} onClick={handleCopyNfcList}>Copy list</Button>,
+          <Button key="download" type="primary" icon={<DownloadOutlined />} disabled={!nfcUrls.length} onClick={handleDownloadNfcList}>
+            Download .csv
+          </Button>,
+        ]}
+      >
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
+          The CSV has a <Typography.Text code>url</Typography.Text> header row, then one NFC profile URL per row. Filter by creation date, or select specific users (selection overrides the date filter).
+        </Typography.Paragraph>
+
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <div>
+            <Typography.Text strong style={{ display: 'block', marginBottom: 6 }}>Created date range</Typography.Text>
+            <DatePicker.RangePicker
+              value={nfcDateRange}
+              onChange={(value) => setNfcDateRange(value)}
+              disabled={nfcUserIds.length > 0}
+              style={{ width: '100%' }}
+              allowClear
+            />
+          </div>
+          <div>
+            <Typography.Text strong style={{ display: 'block', marginBottom: 6 }}>Specific users (optional)</Typography.Text>
+            <Select
+              mode="multiple"
+              allowClear
+              showSearch
+              loading={nfcLoading}
+              value={nfcUserIds}
+              onChange={(values: string[]) => setNfcUserIds(values)}
+              optionFilterProp="label"
+              placeholder="Leave empty to export every user in the selected date range"
+              maxTagCount="responsive"
+              style={{ width: '100%' }}
+              options={nfcUsers.map((u) => ({ value: u.id, label: `${u.fullname} — ${u.email}` }))}
+            />
+          </div>
+        </Space>
+
+        <Divider style={{ margin: '16px 0 12px' }} />
+
+        <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }} wrap>
+          <Typography.Text type="secondary">
+            {nfcTargetUsers.length} user(s) · {nfcUrls.length} link(s)
+          </Typography.Text>
+          <Typography.Text type="secondary">
+            {nfcUserIds.length > 0 ? 'Selected users' : nfcDateRange ? 'Users in date range' : 'All users'}
+          </Typography.Text>
+        </Space>
+
+        <Input.TextArea
+          value={nfcCsvText}
+          readOnly
+          rows={10}
+          placeholder={nfcLoading ? 'Loading users...' : 'No users match the current filters.'}
+          style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 }}
+        />
       </Modal>
     </>
   );

@@ -35,7 +35,7 @@ const MODES: Record<Lang, Record<Mode, ModeData>> = {
   vi: {
     guide: {
       role: "Hướng dẫn viên du lịch",
-      bio: "Đồng hành cùng bạn khám phá miền Trung, từ phố cổ đến những bãi biển đẹp nhất.",
+      bio: "Đồng hành cùng bạn khám phá Việt Nam từ đất liền đến hải đảo.",
       props: ["🗺️", "🧭", "📸", "🎒"],
       switchMsg: "Chế độ hướng dẫn viên: sẵn sàng lên đường!",
       msgs: (n: string) => [
@@ -73,7 +73,7 @@ const MODES: Record<Lang, Record<Mode, ModeData>> = {
   en: {
     guide: {
       role: "Tour Guide",
-      bio: "Join me to explore Central Vietnam, from ancient towns to the most beautiful beaches.",
+      bio: "Join me to explore Vietnam, from the mainland to the islands.",
       props: ["🗺️", "🧭", "📸", "🎒"],
       switchMsg: "Tour guide mode: ready to hit the road!",
       msgs: (n: string) => [
@@ -151,16 +151,16 @@ const UI: Record<
   },
 };
 
-const TECH_MSGS: Record<Lang, string[]> = {
-  vi: [
-    "Chào bạn! Mình là kỹ thuật viên trực ca, cần kiểm tra gì cứ gọi nhé!",
-    "Hi! Rack đang chạy ổn, mình vừa siết lại cáp nguồn xong.",
-    "Chào nhé! Bạn muốn xem thông số nhiệt độ hay băng thông?",
+const TECH_MSGS: Record<Lang, (n: string) => string[]> = {
+  vi: (n: string) => [
+    `Tôi tên là ${n}.`,
+    "Tôi đang kiểm tra server để đảm bảo hoạt động 24/7.",
+    "Nếu có vấn đề gì về hạ tầng và phần mềm cứ liên hệ tôi nhé.",
   ],
-  en: [
-    "Hi! I'm the on-call technician — call me if you need anything checked!",
-    "Hi! The rack is running fine; I just tightened the power cables.",
-    "Hey! Want to see the temperature or bandwidth stats?",
+  en: (n: string) => [
+    `My name is ${n}.`,
+    "I'm checking the servers to make sure everything runs 24/7.",
+    "If you have any infrastructure or software issues, just contact me.",
   ],
 };
 
@@ -200,8 +200,13 @@ const CSS = `
 .it-template .card{position:fixed;z-index:5;left:0;right:0;bottom:0;max-height:58vh;max-height:58dvh;display:flex;flex-direction:column;border:1px solid var(--line);border-bottom:0;border-radius:28px 28px 0 0;background:var(--card);backdrop-filter:blur(16px);box-shadow:0 -20px 60px -24px rgba(0,30,50,.5);transition:max-height .35s ease}
 .it-template .card.min{max-height:215px}
 .it-template .scroll{overflow-y:auto;overscroll-behavior:contain;padding:56px 18px calc(18px + env(safe-area-inset-bottom,0px));scrollbar-width:thin}
-.it-template .avatar{position:absolute;z-index:2;top:-48px;left:50%;margin-left:-48px;width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);background:#fff;box-shadow:0 8px 22px -8px rgba(0,0,0,.5);overflow:hidden}
-.it-template .avatar svg,.it-template .avatar img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+.it-template .avatar{position:absolute;z-index:2;top:-48px;left:50%;margin-left:-48px;width:96px;height:96px;border-radius:50%;border:4px solid #ff9f1c;background:#fff;box-shadow:0 0 25px 8px color-mix(in srgb,var(--sun) 35%,transparent),0 0 60px 15px color-mix(in srgb,var(--sun) 15%,transparent),0 8px 22px -8px rgba(0,0,0,.5);animation:it-avatar-pulse 3s ease-in-out infinite;will-change:transform}
+.it-template .avatar svg,.it-template .avatar img{position:relative;z-index:1;width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+.it-template .avatar .halo{position:absolute;inset:0;border-radius:50%;border:2px solid color-mix(in srgb,var(--sun) 60%,transparent);animation:it-avatar-ripple 2.4s ease-out infinite;pointer-events:none}
+.it-template .avatar .halo:nth-child(2){animation-delay:.8s}
+.it-template .avatar .halo:nth-child(3){animation-delay:1.6s}
+@keyframes it-avatar-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes it-avatar-ripple{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.6);opacity:0}}
 .it-template .fold{position:absolute;z-index:3;top:12px;right:14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--text);display:grid;place-items:center;cursor:pointer}
 .it-template .fold svg{width:22px;height:22px;fill:currentColor;transition:transform .3s}
 .it-template .card.min .fold svg{transform:rotate(180deg)}
@@ -217,7 +222,9 @@ const CSS = `
 .it-template .ico{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;font-size:19px;overflow:hidden}
 .it-template .ico img{width:24px;height:24px;object-fit:contain}
 .it-template .row span{font-size:16px;font-weight:600;line-height:1.25;word-break:break-word}
-.it-template .note{margin-top:10px;text-align:center;font-size:11.5px;line-height:1.5;color:var(--muted)}
+.it-template .nfc{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:11.5px;line-height:1.5;color:var(--muted)}
+.it-template .nfc i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--sun);animation:it-nfc-pulse 2s infinite}
+@keyframes it-nfc-pulse{0%{box-shadow:0 0 0 0 var(--sun)}70%,100%{box-shadow:0 0 0 10px transparent}}
 .it-template .stage.dev + .card{--text:#effffd;--muted:#a9d6d2;--line:rgba(140,255,200,.28);--sun:#ffc83d;--lagoon:#2ee0c0;--bg:#07222c;background:rgba(6,28,40,.38);backdrop-filter:blur(9px) saturate(1.6);box-shadow:0 -14px 70px -18px rgba(118,185,0,.45),inset 0 1px 0 rgba(180,255,120,.25)}
 .it-template .stage.dev + .card .row{background:rgba(5,24,34,.4)}
 .it-template .stage.dev + .card .scroll{text-shadow:0 1px 6px rgba(0,20,30,.75)}
@@ -233,14 +240,24 @@ const CSS = `
 .it-template .scroll{padding:14px 24px 28px;flex:1}
 .it-template .fold{display:none}
 .it-template .switch,.it-template .bubble{left:calc((100% - var(--panel))/2)}
-.it-template .who{text-align:left}.it-template .bio{margin-left:0}.it-template .chips{justify-content:flex-start}.it-template h1{font-size:34px}.it-template .note{text-align:left}
+.it-template .who{text-align:left}.it-template .bio{margin-left:0}.it-template .chips{justify-content:flex-start}.it-template h1{font-size:34px}
 .it-template .stage.dev + .card{box-shadow:-14px 0 70px -18px rgba(118,185,0,.45),inset 1px 0 0 rgba(180,255,120,.25)}
 }
-@media (prefers-reduced-motion:reduce){.it-template .card{transition:none}}
+@media (prefers-reduced-motion:reduce){.it-template .card{transition:none}.it-template .avatar,.it-template .avatar .halo,.it-template .nfc i{animation:none}}
 `;
 
-export default function ItDevopsTemplate({ user, items }: TemplateProps) {
-  const [mode, setMode] = useState<Mode>("guide");
+interface ItDevopsTemplateProps extends TemplateProps {
+  initialMode?: Mode;
+  hideModeSwitch?: boolean;
+}
+
+export default function ItDevopsTemplate({
+  user,
+  items,
+  initialMode = "guide",
+  hideModeSwitch = false,
+}: ItDevopsTemplateProps) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [lang, setLang] = useState<Lang>("vi");
   const [folded, setFolded] = useState(false);
 
@@ -332,15 +349,20 @@ export default function ItDevopsTemplate({ user, items }: TemplateProps) {
           <button type="button" role="tab" aria-selected={lang === "vi"} className={lang === "vi" ? "on" : ""} onClick={() => setLang("vi")}>VI</button>
           <button type="button" role="tab" aria-selected={lang === "en"} className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>EN</button>
         </div>
-        <div className="switch" role="tablist" aria-label={ui.modeLabel}>
-          <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "on" : ""} onClick={() => setMode("guide")}>{ui.guideTab}</button>
-          <button type="button" role="tab" aria-selected={mode === "dev"} className={mode === "dev" ? "on" : ""} onClick={() => setMode("dev")}>{ui.devTab}</button>
-        </div>
+        {!hideModeSwitch && (
+          <div className="switch" role="tablist" aria-label={ui.modeLabel}>
+            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "on" : ""} onClick={() => setMode("guide")}>{ui.guideTab}</button>
+            <button type="button" role="tab" aria-selected={mode === "dev"} className={mode === "dev" ? "on" : ""} onClick={() => setMode("dev")}>{ui.devTab}</button>
+          </div>
+        )}
         <canvas ref={canvasRef} id="gl" aria-label={ui.canvasLabel} />
       </div>
 
       <main className={`card${folded ? " min" : ""}`} ref={cardRef}>
         <div className="avatar">
+          <span className="halo" aria-hidden="true" />
+          <span className="halo" aria-hidden="true" />
+          <span className="halo" aria-hidden="true" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={avatarSrc} alt={user.fullname} />
         </div>
@@ -387,7 +409,7 @@ export default function ItDevopsTemplate({ user, items }: TemplateProps) {
             })}
           </nav>
 
-          <p className="note">{NOTE}</p>
+          <p className="nfc"><i /><span>{NOTE}</span></p>
         </div>
       </main>
     </div>
@@ -475,6 +497,513 @@ function setupScene(
   [[-1.2, -1.5, 1], [-1.7, -0.9, 0.8], [1.7, -1.2, 0.9], [-2.3, 1.1, 0.8]].forEach((p: any) => pine(p[0], p[1], p[2]));
   const tent = mesh(new THREE.ConeGeometry(0.34, 0.5, 4), flat(0xff6b4a), -1.0, 0.25, 3.0);
   tent.rotation.y = Math.PI / 4;
+
+  /* ===== bản đồ Việt Nam 3D cỡ lớn phía sau (chỉ hiện ở chế độ hướng dẫn viên) ===== */
+  const VN_OUTLINE: [number, number][] = [
+    [102.15, 22.35], [102.9, 22.55], [103.6, 22.75], [104.4, 22.85], [105.2, 23.05], [106.0, 22.95],
+    [106.8, 22.8], [107.3, 21.95], [107.9, 21.55], [108.05, 21.35], [106.95, 20.85], [106.55, 20.35],
+    [106.15, 19.85], [105.85, 19.35], [105.75, 18.75], [105.95, 18.25], [106.35, 17.75], [106.75, 17.35],
+    [107.15, 16.95], [107.65, 16.55], [108.25, 16.1], [108.9, 15.35], [109.25, 14.7], [109.45, 13.95],
+    [109.35, 13.1], [109.05, 12.45], [108.6, 11.85], [107.95, 11.25], [107.15, 10.75], [106.85, 10.45],
+    [106.6, 10.3], [106.35, 10.05], [106.05, 9.8], [105.75, 9.55], [105.45, 9.15], [105.15, 8.85],
+    [104.85, 8.6], [104.75, 8.75], [104.95, 9.15], [105.05, 9.55], [105.15, 9.95], [104.95, 10.25],
+    [104.75, 10.55], [104.85, 10.95], [105.25, 11.35], [105.75, 11.85], [106.35, 12.35], [106.95, 12.85],
+    [107.35, 13.35], [107.45, 13.95], [107.65, 14.55], [107.55, 15.15], [107.25, 15.65], [107.35, 16.05],
+    [106.95, 16.45], [106.45, 16.85], [106.05, 17.25], [105.75, 17.65], [105.45, 18.05], [105.05, 18.45],
+    [104.65, 18.85], [104.25, 19.25], [103.95, 19.65], [104.25, 20.05], [104.05, 20.45], [103.55, 20.75],
+    [103.05, 21.05], [102.85, 21.45], [102.45, 21.85],
+  ];
+  const MAP_SCALE = 0.85;
+  const MAP_DEPTH = 0.3;
+  const mapGroup = new THREE.Group();
+  mapGroup.position.set(-1.0, 0.85, -7.6);
+  scene.add(mapGroup);
+  const mapRoot = new THREE.Group();
+  mapGroup.add(mapRoot);
+  const MX = (lon: number) => (lon - 105.8) * MAP_SCALE;
+  const MY = (lat: number) => (lat - 15.6) * MAP_SCALE;
+
+  function roundRect(x: CanvasRenderingContext2D, X: number, Y: number, W: number, H: number, R: number) {
+    x.beginPath();
+    x.moveTo(X + R, Y);
+    x.arcTo(X + W, Y, X + W, Y + H, R);
+    x.arcTo(X + W, Y + H, X, Y + H, R);
+    x.arcTo(X, Y + H, X, Y, R);
+    x.arcTo(X, Y, X + W, Y, R);
+    x.closePath();
+  }
+  function makeMapLabel(name: string, sub: string, color: string, w: number) {
+    const c = document.createElement("canvas");
+    c.width = 512;
+    c.height = 180;
+    const ctx = c.getContext("2d");
+    if (!ctx) return new THREE.Sprite();
+    const x: CanvasRenderingContext2D = ctx;
+    function draw() {
+      x.clearRect(0, 0, 512, 180);
+      const grad = x.createLinearGradient(0, 0, 0, 180);
+      grad.addColorStop(0, "rgba(5,42,50,.92)");
+      grad.addColorStop(1, "rgba(4,24,32,.82)");
+      x.fillStyle = grad;
+      roundRect(x, 8, 8, 496, 164, 34);
+      x.fill();
+      x.strokeStyle = color;
+      x.lineWidth = 4;
+      x.stroke();
+      x.textAlign = "center";
+      x.textBaseline = "middle";
+      x.fillStyle = "#ffffff";
+      x.font = '800 62px "Baloo 2",system-ui,sans-serif';
+      x.fillText(name, 256, sub ? 66 : 92);
+      if (sub) {
+        x.fillStyle = color;
+        x.font = '700 34px "Baloo 2",system-ui,sans-serif';
+        x.fillText(sub, 256, 128);
+      }
+    }
+    draw();
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
+    spr.renderOrder = 20;
+    spr.scale.set(w, (w * 180) / 512, 1);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        draw();
+        tex.needsUpdate = true;
+      });
+    }
+    return spr;
+  }
+
+  const extrudeOpt = { depth: MAP_DEPTH, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.055, bevelThickness: 0.055, curveSegments: 8 };
+  function clipPoly(poly: any[], above: boolean, cut: number) {
+    const out: any[] = [];
+    const inside = (p: any) => (above ? p[1] >= cut : p[1] <= cut);
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i + 1) % poly.length];
+      const ain = inside(a);
+      const bin = inside(b);
+      if (ain) out.push(a);
+      if (ain !== bin) {
+        const t = (cut - a[1]) / (b[1] - a[1]);
+        out.push([a[0] + (b[0] - a[0]) * t, cut]);
+      }
+    }
+    return out;
+  }
+  const vnSideMat = new THREE.MeshStandardMaterial({ color: 0xd0aa6e, roughness: 0.9, metalness: 0.04, side: THREE.DoubleSide });
+  function buildZone(poly: any[], color: number, emissive: number) {
+    const sh = new THREE.Shape();
+    poly.forEach(([lon, lat]: any, i: number) => {
+      const px = MX(lon);
+      const py = MY(lat);
+      if (i) sh.lineTo(px, py);
+      else sh.moveTo(px, py);
+    });
+    sh.closePath();
+    const top = new THREE.MeshStandardMaterial({ color, roughness: 0.78, metalness: 0.05, emissive, emissiveIntensity: 0.35, flatShading: true, side: THREE.DoubleSide });
+    mapRoot.add(new THREE.Mesh(new THREE.ExtrudeGeometry(sh, extrudeOpt), [top, vnSideMat]));
+  }
+  buildZone(clipPoly(VN_OUTLINE, true, 17), 0x2f9e63, 0x0b3a2a);
+  buildZone(clipPoly(clipPoly(VN_OUTLINE, true, 11), false, 17), 0xe0b76a, 0x5a3a08);
+  buildZone(clipPoly(VN_OUTLINE, false, 11), 0x4fd18b, 0x0e4a3a);
+
+  const northMat = new THREE.MeshStandardMaterial({ color: 0x1f6f4a, roughness: 0.86, metalness: 0.04, flatShading: true });
+  const northMat2 = new THREE.MeshStandardMaterial({ color: 0x2d8a5b, roughness: 0.86, metalness: 0.04, flatShading: true });
+  const capMat = new THREE.MeshStandardMaterial({ color: 0xf6fff8, roughness: 0.6, metalness: 0.02, emissive: 0x9ad9b5, emissiveIntensity: 0.12, flatShading: true });
+  [[103.15, 21.55, 0.42, 0.34], [103.7, 22.0, 0.52, 0.42], [104.35, 22.25, 0.62, 0.48], [104.95, 21.85, 0.45, 0.36], [103.55, 20.95, 0.32, 0.28], [105.5, 21.6, 0.28, 0.24]].forEach(([lon, lat, r, h]: any, i: number) => {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5, 1), i % 2 ? northMat : northMat2);
+    m.position.set(MX(lon), MY(lat) + h / 2, MAP_DEPTH + 0.07);
+    mapRoot.add(m);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(r * 0.36, h * 0.3, 5, 1), capMat);
+    cap.position.set(MX(lon), MY(lat) + h * 0.86, MAP_DEPTH + 0.07);
+    mapRoot.add(cap);
+  });
+
+  const deltaMat = new THREE.LineBasicMaterial({ color: 0x53e7dc, transparent: true, opacity: 0.9 });
+  [
+    [[105.5, 10.8], [106.0, 10.2], [106.3, 9.6], [106.2, 9.0]],
+    [[106.0, 10.2], [105.4, 9.7], [105.0, 9.1]],
+    [[106.3, 9.6], [107.0, 9.2], [107.3, 8.8]],
+    [[106.0, 9.5], [106.7, 9.1]],
+  ].forEach((line: any) => {
+    const pts = line.map(([lon, lat]: any) => new THREE.Vector3(MX(lon), MY(lat), MAP_DEPTH + 0.08));
+    mapRoot.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), deltaMat));
+  });
+
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x9a6a3a, roughness: 0.9 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2dbb6a, roughness: 0.8, flatShading: true, side: THREE.DoubleSide });
+  function mapPalm(lon: number, lat: number, s: number) {
+    const g = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.016 * s, 0.03 * s, 0.34 * s, 6), trunkMat);
+    trunk.position.y = 0.17 * s;
+    g.add(trunk);
+    for (let i = 0; i < 5; i++) {
+      const a = (i * Math.PI * 2) / 5;
+      const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.09 * s, 0.34 * s, 4, 1), leafMat);
+      leaf.position.set(Math.cos(a) * 0.12 * s, 0.36 * s, Math.sin(a) * 0.12 * s);
+      leaf.rotation.z = 0.95;
+      leaf.rotation.y = a;
+      g.add(leaf);
+    }
+    g.position.set(MX(lon), MY(lat), MAP_DEPTH + 0.12);
+    mapRoot.add(g);
+  }
+  mapPalm(104.55, 9.55, 0.9);
+  mapPalm(104.95, 9.1, 0.7);
+  mapPalm(107.05, 9.35, 0.8);
+
+  const boat = new THREE.Group();
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.08), new THREE.MeshStandardMaterial({ color: 0xff6b4a, roughness: 0.7 }));
+  hull.position.y = 0.025;
+  boat.add(hull);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.2, 6), trunkMat);
+  mast.position.y = 0.14;
+  boat.add(mast);
+  const sail = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.16, 3, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, flatShading: true, side: THREE.DoubleSide }));
+  sail.position.set(0.02, 0.16, 0);
+  boat.add(sail);
+  boat.position.set(MX(106.35), MY(9.35), MAP_DEPTH + 0.13);
+  mapRoot.add(boat);
+
+  const goldMat = new THREE.MeshBasicMaterial({ color: 0xffd36a });
+  const baNa = new THREE.Group();
+  baNa.position.set(MX(108.65), MY(16.35), MAP_DEPTH + 0.12);
+  baNa.scale.setScalar(1.25);
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.034, 8, 32, Math.PI), goldMat);
+  arch.position.y = 0.1;
+  baNa.add(arch);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.035, 0.055), goldMat);
+  deck.position.y = 0.1;
+  baNa.add(deck);
+  [-0.32, 0.32].forEach((dx) => {
+    const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.05, 0.27, 8), goldMat);
+    tower.position.set(dx, 0.13, 0);
+    baNa.add(tower);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), goldMat);
+    hand.position.set(dx, 0.28, 0);
+    baNa.add(hand);
+  });
+  mapRoot.add(baNa);
+
+  const haLong = new THREE.Group();
+  haLong.position.set(MX(106.85), MY(20.85), MAP_DEPTH + 0.11);
+  haLong.scale.setScalar(1.35);
+  const halongWater = new THREE.Mesh(new THREE.CircleGeometry(0.38, 20), new THREE.MeshBasicMaterial({ color: 0x2fbfd0, side: THREE.DoubleSide }));
+  halongWater.scale.y = 0.62;
+  halongWater.position.z = -0.04;
+  halongWater.userData.back = true;
+  haLong.add(halongWater);
+  const karstMat = new THREE.MeshBasicMaterial({ color: 0xa9c4b8 });
+  const karstMat2 = new THREE.MeshBasicMaterial({ color: 0x7fa395 });
+  [[-0.16, 0.02, 0.1, 0.38, 0], [0.05, 0.09, 0.08, 0.5, 1], [0.19, -0.04, 0.07, 0.32, 0]].forEach(([dx, dy, r, h, i]: any) => {
+    const karst = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.45, r, h, 6, 1), i ? karstMat2 : karstMat);
+    karst.position.set(dx, dy + h / 2, 0);
+    haLong.add(karst);
+  });
+  const junkHull = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.06), new THREE.MeshBasicMaterial({ color: 0xd94f2a }));
+  junkHull.position.set(0.17, -0.15, 0.02);
+  haLong.add(junkHull);
+  const junkSail = new THREE.Mesh(new THREE.ConeGeometry(0.085, 0.17, 3, 1), new THREE.MeshBasicMaterial({ color: 0xffe6a8, side: THREE.DoubleSide }));
+  junkSail.position.set(0.17, -0.05, 0.02);
+  haLong.add(junkSail);
+  mapRoot.add(haLong);
+
+  const woodIconMat = new THREE.MeshBasicMaterial({ color: 0x9a6a3a });
+  const hoiAn = new THREE.Group();
+  hoiAn.position.set(MX(108.2), MY(15.1), MAP_DEPTH + 0.12);
+  hoiAn.scale.setScalar(1.55);
+  const lanternPole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.42, 6), woodIconMat);
+  lanternPole.position.y = 0.21;
+  hoiAn.add(lanternPole);
+  const lanternArm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.02, 0.02), woodIconMat);
+  lanternArm.position.set(0.11, 0.4, 0);
+  hoiAn.add(lanternArm);
+  const lantern = new THREE.Group();
+  lantern.position.set(0.22, 0.3, 0);
+  hoiAn.add(lantern);
+  const lanternBody = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.18, 10), new THREE.MeshBasicMaterial({ color: 0xff5a3c }));
+  lantern.add(lanternBody);
+  const lanternTop = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.028, 10), goldMat);
+  lanternTop.position.y = 0.1;
+  lantern.add(lanternTop);
+  const lanternBottom = lanternTop.clone();
+  lanternBottom.position.y = -0.1;
+  lantern.add(lanternBottom);
+  const lanternTassel = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.1, 6), goldMat);
+  lanternTassel.position.y = -0.19;
+  lantern.add(lanternTassel);
+  mapRoot.add(hoiAn);
+
+  /* chợ nổi miền Tây (Mekong) */
+  const mekong = new THREE.Group();
+  mekong.position.set(MX(106.0), MY(9.6), MAP_DEPTH + 0.11);
+  mekong.scale.setScalar(1.35);
+  const mekongWater = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: 0x2fbfd0, side: THREE.DoubleSide }));
+  mekongWater.scale.y = 0.62;
+  mekongWater.position.z = -0.04;
+  mekongWater.userData.back = true;
+  mekong.add(mekongWater);
+  const basketBoat = new THREE.Mesh(new THREE.CircleGeometry(0.22, 16), new THREE.MeshBasicMaterial({ color: 0xc08a45, side: THREE.DoubleSide }));
+  basketBoat.scale.y = 0.55;
+  basketBoat.position.z = 0.03;
+  mekong.add(basketBoat);
+  const basketRim = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.018, 6, 20), new THREE.MeshBasicMaterial({ color: 0x7a5528 }));
+  basketRim.scale.y = 0.55;
+  basketRim.position.z = 0.04;
+  mekong.add(basketRim);
+  const basketCanopy = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.05), new THREE.MeshBasicMaterial({ color: 0xffd36a }));
+  basketCanopy.position.set(0, -0.02, 0.05);
+  mekong.add(basketCanopy);
+  const mekongPaddle = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.01, 0.3, 6), woodIconMat);
+  mekongPaddle.rotation.z = 0.9;
+  mekongPaddle.position.set(0.1, 0.08, 0.07);
+  mekong.add(mekongPaddle);
+  /* thêm ghe chở trái cây và cây bẹo treo hàng đặc trưng của chợ nổi */
+  [[-0.34, -0.1, 0.12, 0xff8a2a], [0.34, 0.08, 0.11, 0x6fcf3a]].forEach(([x, y, r, c]: any) => {
+    const b = new THREE.Mesh(new THREE.CircleGeometry(r * 1.5, 14), new THREE.MeshBasicMaterial({ color: 0xc08a45, side: THREE.DoubleSide }));
+    b.scale.y = 0.5;
+    b.position.set(x, y, 0.03);
+    mekong.add(b);
+    const f = new THREE.Mesh(new THREE.CircleGeometry(r * 0.7, 10), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }));
+    f.position.set(x, y + 0.05, 0.05);
+    mekong.add(f);
+  });
+  const beoPole = new THREE.Mesh(new THREE.PlaneGeometry(0.014, 0.46), woodIconMat);
+  beoPole.position.set(-0.14, 0.18, 0.06);
+  mekong.add(beoPole);
+  [[-0.14, 0.42, 0xffd23a], [-0.08, 0.36, 0xff8a2a], [-0.2, 0.34, 0x6fcf3a]].forEach(([x, y, c]: any) => {
+    const f = new THREE.Mesh(new THREE.CircleGeometry(0.04, 10), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }));
+    f.position.set(x, y, 0.07);
+    mekong.add(f);
+  });
+  mapRoot.add(mekong);
+
+  /* địa danh phẳng, vẽ theo thứ tự lớp (phần vẽ sau nằm trên) */
+  const flatMat = (c: number) => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
+  const fm = (g: any, geo: any, c: number, x: number, y: number) => {
+    const o = new THREE.Mesh(geo, flatMat(c));
+    o.position.set(x, y, 0);
+    g.add(o);
+    return o;
+  };
+  const fr = (g: any, w: number, h: number, x: number, y: number, c: number) => fm(g, new THREE.PlaneGeometry(w, h), c, x, y + h / 2);
+  const ft = (g: any, w: number, h: number, x: number, y: number, c: number) => {
+    const s = new THREE.Shape();
+    s.moveTo(-w / 2, 0);
+    s.lineTo(w / 2, 0);
+    s.lineTo(0, h);
+    s.closePath();
+    return fm(g, new THREE.ShapeGeometry(s), c, x, y);
+  };
+  const fc = (g: any, r: number, x: number, y: number, c: number, seg?: number) => fm(g, new THREE.CircleGeometry(r, seg || 16), c, x, y);
+  function landmark(lon: number, lat: number, sc: number) {
+    const g = new THREE.Group();
+    g.position.set(MX(lon), MY(lat), MAP_DEPTH + 0.12);
+    g.scale.setScalar(sc);
+    mapRoot.add(g);
+    return g;
+  }
+
+  /* Hà Nội: Lăng Chủ tịch Hồ Chí Minh (ngôi sao vàng của thủ đô nằm ngay bên cạnh) */
+  const lang = landmark(105.1, 20.55, 0.95);
+  fr(lang, 0.62, 0.05, 0, 0, 0xbdb5a2);
+  fr(lang, 0.5, 0.05, 0, 0.05, 0xd2cbb8);
+  fr(lang, 0.38, 0.2, 0, 0.1, 0xc7c1b0);
+  for (let i = -3; i <= 3; i++) fr(lang, 0.026, 0.2, i * 0.054, 0.1, 0xf1ede0);
+  fr(lang, 0.48, 0.045, 0, 0.3, 0x8f8a7e);
+  fr(lang, 0.42, 0.03, 0, 0.345, 0x6f6a60);
+  fr(lang, 0.008, 0.16, 0, 0.375, 0x6a4a2a);
+  fr(lang, 0.1, 0.065, 0.05, 0.47, 0xd9261c);
+  fc(lang, 0.016, 0.05, 0.5025, 0xffdd00, 5);
+
+  /* Huế: Ngọ Môn và Kỳ Đài của Kinh thành Huế */
+  const hue = landmark(107.1, 16.55, 0.8);
+  fr(hue, 0.66, 0.16, 0, 0, 0xb9a68a);
+  [-0.16, 0, 0.16].forEach((x) => fr(hue, 0.08, 0.1, x, 0, 0x2a1a12));
+  [-1, 1].forEach((s) => {
+    fr(hue, 0.12, 0.07, s * 0.27, 0.16, 0xd2402f);
+    fr(hue, 0.18, 0.025, s * 0.27, 0.23, 0xf2c14e);
+  });
+  fr(hue, 0.46, 0.09, 0, 0.16, 0xd2402f);
+  fr(hue, 0.58, 0.03, 0, 0.25, 0xf2c14e);
+  fr(hue, 0.3, 0.08, 0, 0.28, 0xd2402f);
+  fr(hue, 0.4, 0.03, 0, 0.36, 0xf2c14e);
+  ft(hue, 0.34, 0.07, 0, 0.39, 0xf2c14e);
+  fr(hue, 0.12, 0.06, -0.52, 0, 0xb9a68a);
+  fr(hue, 0.09, 0.06, -0.52, 0.06, 0xc9b79c);
+  fr(hue, 0.06, 0.06, -0.52, 0.12, 0xb9a68a);
+  fr(hue, 0.01, 0.24, -0.52, 0.18, 0x6a4a2a);
+  fr(hue, 0.14, 0.09, -0.45, 0.33, 0xd9261c);
+  fc(hue, 0.022, -0.45, 0.375, 0xffdd00, 5);
+
+  /* TP. Hồ Chí Minh: Nhà thờ Đức Bà Sài Gòn */
+  const notre = landmark(106.3, 10.95, 1.0);
+  fr(notre, 0.36, 0.2, 0, 0, 0xc4553a);
+  ft(notre, 0.38, 0.1, 0, 0.2, 0x9c3f2a);
+  [-1, 1].forEach((s) => {
+    fr(notre, 0.1, 0.38, s * 0.14, 0, 0xc4553a);
+    fr(notre, 0.12, 0.025, s * 0.14, 0.38, 0xe8e2d0);
+    ft(notre, 0.09, 0.22, s * 0.14, 0.405, 0x6b6b6b);
+    fr(notre, 0.008, 0.04, s * 0.14, 0.625, 0x333333);
+  });
+  fc(notre, 0.036, 0, 0.15, 0xffe9a8);
+  fr(notre, 0.07, 0.09, 0, 0, 0x3a2a20);
+  fr(notre, 0.08, 0.03, 0, -0.05, 0xe8e2d0);
+  fr(notre, 0.025, 0.08, 0, -0.02, 0xffffff);
+  fc(notre, 0.02, 0, 0.07, 0xffffff);
+
+  [
+    ["HẠ LONG", 106.85, 20.85, 0.88, "#8dffb0", ""],
+    ["CẦU VÀNG", 108.65, 16.35, 0.88, "#ffd36a", "BÀ NÀ"],
+    ["HỘI AN", 108.2, 15.1, 0.88, "#ffb36a", ""],
+    ["CHỢ NỔI", 106.0, 9.6, 0.62, "#53e7dc", "MEKONG"],
+    ["LĂNG BÁC", 105.1, 20.55, -0.34, "#ffd36a", "HÀ NỘI"],
+    ["KINH THÀNH", 107.1, 16.55, -0.36, "#ff9a7a", "HUẾ"],
+    ["SÀI GÒN", 106.3, 10.95, 0.95, "#ff9a7a", "NHÀ THỜ ĐỨC BÀ"],
+  ].forEach(([name, lon, lat, dy, color, sub]: any) => {
+    const t = makeMapLabel(name, sub, color, 1.15);
+    t.position.set(MX(lon), MY(lat) + dy, MAP_DEPTH + 0.54);
+    mapRoot.add(t);
+  });
+
+  const vnPts = VN_OUTLINE.map(([lon, lat]) => new THREE.Vector3(MX(lon), MY(lat), MAP_DEPTH + 0.066));
+  vnPts.push(vnPts[0].clone());
+  const coastMat = new THREE.LineBasicMaterial({ color: 0xfff1b8, transparent: true, opacity: 0.85 });
+  mapRoot.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(vnPts), coastMat));
+
+  const halo = new THREE.Mesh(new THREE.CircleGeometry(6.1, 64), new THREE.MeshBasicMaterial({ color: 0x0a4f5c, transparent: true, opacity: 0.15, depthWrite: false, side: THREE.DoubleSide }));
+  halo.position.set(1.0, 0.1, -0.55);
+  mapRoot.add(halo);
+  const haloRing = new THREE.Mesh(new THREE.RingGeometry(5.86, 6.1, 80), new THREE.MeshBasicMaterial({ color: 0x53e7dc, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+  haloRing.position.copy(halo.position);
+  mapRoot.add(haloRing);
+
+  const islTop = new THREE.MeshStandardMaterial({ color: 0x86e06a, roughness: 0.72, metalness: 0.05, emissive: 0x1a5a2a, emissiveIntensity: 0.42, flatShading: true });
+  const islSide = new THREE.MeshStandardMaterial({ color: 0xf0d9a0, roughness: 0.9, metalness: 0.04 });
+  const islandLabels: any[] = [];
+  function addIsland(o: any) {
+    const g = new THREE.Group();
+    g.position.set(MX(o.lon), MY(o.lat), MAP_DEPTH + 0.055);
+    mapRoot.add(g);
+    o.discs.forEach(([dx, dy, r, sx, sy]: any) => {
+      const d = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.94, 0.15, 12, 1), [islSide, islTop, islSide]);
+      d.rotation.x = Math.PI / 2;
+      d.scale.set(sx || 1, 1, sy || 1);
+      d.position.set(dx, dy, 0);
+      g.add(d);
+    });
+    const ringMat = new THREE.MeshBasicMaterial({ color: o.accent, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false });
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(o.ring, 0.022, 8, 64), ringMat);
+    ring.position.z = -0.035;
+    g.add(ring);
+    const lab = makeMapLabel(o.name, o.sub, o.accent, 2.0);
+    lab.position.set(MX(o.lon) + (o.label.dx || 0), MY(o.lat) + o.label.dy, MAP_DEPTH + 0.55);
+    mapRoot.add(lab);
+    islandLabels.push({ ring: ring, mat: ringMat, ph: islandLabels.length * 1.7 });
+  }
+  addIsland({
+    name: "Hoàng Sa",
+    sub: "QUẦN ĐẢO",
+    lon: 112.0,
+    lat: 16.6,
+    ring: 0.62,
+    accent: "#ffd36a",
+    label: { dx: -1.35, dy: 3.65 },
+    discs: [[-0.22, 0.16, 0.1], [-0.02, 0.25, 0.075], [0.2, 0.14, 0.09], [0.03, -0.02, 0.11], [-0.16, -0.16, 0.065], [0.24, -0.12, 0.055]],
+  });
+  addIsland({
+    name: "Trường Sa",
+    sub: "QUẦN ĐẢO",
+    lon: 113.8,
+    lat: 9.9,
+    ring: 0.62,
+    accent: "#ffd36a",
+    label: { dx: -0.25, dy: 1.1 },
+    discs: [[-0.2, 0.18, 0.07], [0.16, 0.2, 0.06], [0.02, -0.02, 0.09], [-0.18, -0.16, 0.05], [0.24, -0.16, 0.055]],
+  });
+  addIsland({
+    name: "Phú Quốc",
+    sub: "ĐẢO",
+    lon: 103.9,
+    lat: 10.2,
+    ring: 0.5,
+    accent: "#35ffd6",
+    label: { dx: 0, dy: 1.0 },
+    discs: [[0, 0, 0.13, 1.7, 0.75], [0.16, -0.3, 0.045], [0.03, 0.24, 0.05]],
+  });
+
+  /* ngôi sao vàng đánh dấu thủ đô Hà Nội */
+  const starCv = document.createElement("canvas");
+  starCv.width = starCv.height = 128;
+  const starCtx = starCv.getContext("2d");
+  if (starCtx) {
+    starCtx.translate(64, 64);
+    starCtx.shadowColor = "rgba(255,211,106,.95)";
+    starCtx.shadowBlur = 20;
+    starCtx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const r = i % 2 ? 22 : 52;
+      starCtx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    starCtx.closePath();
+    starCtx.fillStyle = "#ffd36a";
+    starCtx.fill();
+    starCtx.shadowBlur = 0;
+    starCtx.lineWidth = 5;
+    starCtx.strokeStyle = "#fff1b8";
+    starCtx.stroke();
+  }
+  const starTex = new THREE.CanvasTexture(starCv);
+  starTex.encoding = THREE.sRGBEncoding;
+  const capitalStar = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, transparent: true, depthWrite: false, depthTest: false }));
+  capitalStar.position.set(MX(105.85), MY(21.03), MAP_DEPTH + 0.66);
+  capitalStar.scale.set(0.72, 0.72, 1);
+  capitalStar.renderOrder = 21;
+  mapRoot.add(capitalStar);
+
+  [haLong, baNa, hoiAn, mekong].forEach((g) => {
+    g.traverse((o: any) => {
+      if (o.isMesh || o.isLine) {
+        o.renderOrder = o.userData.back ? 18 : 19;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        mats.forEach((m: any) => {
+          if (!m) return;
+          m.depthTest = false;
+          m.depthWrite = true;
+        });
+      }
+    });
+  });
+  /* các địa danh mới và chợ nổi: lớp vẽ tăng dần theo thứ tự tạo để chồng hình đúng */
+  {
+    let rm = 19.1;
+    mekong.children.forEach((o: any) => {
+      o.renderOrder = rm;
+      rm += 0.002;
+    });
+  }
+  {
+    let ro = 19.5;
+    [lang, hue, notre].forEach((g) =>
+      g.traverse((o: any) => {
+        if (o.isMesh) {
+          o.renderOrder = ro;
+          ro += 0.002;
+          o.material.depthTest = false;
+          o.material.depthWrite = false;
+        }
+      }),
+    );
+  }
+  capitalStar.material.depthTest = false;
+  capitalStar.material.depthWrite = false;
+
+  let mapBaseY = -3.85;
 
   const clouds: any[] = [];
   [[5.2, 2.3, 0.0, 0.18], [5.8, 3.4, 2.1, 0.12], [4.6, 1.4, 4.0, -0.15]].forEach(([r, y, a0, sp]: any) => {
@@ -1047,6 +1576,7 @@ function setupScene(
   let hideT: ReturnType<typeof setTimeout> | undefined;
   let msgI = 0;
   let tipI = 0;
+  let techMsgI = 0;
   let wave = 0;
   let camD = 10.2;
   let camAz = 0;
@@ -1100,8 +1630,8 @@ function setupScene(
     } else if (modeRef.current === "dev" && near(tech, 0.8, e, 55)) {
       techGreet = 3.4;
       techFix = 0;
-      const techMsgs = TECH_MSGS[langRef.current];
-      say(techMsgs[Math.floor(Math.random() * techMsgs.length)]);
+      const techMsgs = TECH_MSGS[langRef.current](infoRef.current.name);
+      say(techMsgs[techMsgI++ % techMsgs.length]);
     } else if (near(modeRef.current === "dev" ? jet : guide, 0.8, e, 55)) {
       wave = 2.6;
       const G = MODES[langRef.current][modeRef.current].msgs(infoRef.current.name);
@@ -1163,6 +1693,7 @@ function setupScene(
     devParts.forEach((o) => (o.visible = m === "dev"));
     guide.visible = m === "guide";
     jet.visible = m === "dev";
+    mapGroup.visible = m === "guide";
     tourists.forEach((tr) => (tr.group.visible = m === "guide"));
     tourOnly.forEach((o) => (o.visible = m === "guide"));
     devScene.visible = m === "dev";
@@ -1184,6 +1715,7 @@ function setupScene(
     camD = Math.max(9.5, (10.2 * h) / Math.min(effW, effH));
     cam.setViewOffset(w, h, wide ? cr.width * 0.25 : 0, wide ? 0 : (h - visH) * 0.25, w, h);
     setSpur(wide ? 0 : Math.PI / 2);
+    mapBaseY = -3.85;
     cam.updateProjectionMatrix();
   }
   const ro = new ResizeObserver(resize);
@@ -1355,6 +1887,20 @@ function setupScene(
     }
     popT = Math.max(0, popT - dt * 2.2);
     guide.scale.setScalar(1.55 * (1 + Math.sin(popT * Math.PI) * 0.25));
+    /* bản đồ Việt Nam 3D: lơ lửng, xoay theo camera, các đảo phát sáng */
+    mapGroup.position.y = mapBaseY + Math.sin(t * 0.55) * 0.09;
+    const mapWant = Math.atan2(cam.position.x - mapGroup.position.x, cam.position.z - mapGroup.position.z);
+    mapGroup.rotation.y += (mapWant - mapGroup.rotation.y) * Math.min(1, dt * 2.2);
+    mapGroup.rotation.z = -0.0873 + Math.sin(t * 0.35) * 0.012;
+    coastMat.opacity = 0.7 + Math.sin(t * 1.6) * 0.22;
+    haloRing.material.opacity = 0.16 + Math.sin(t * 1.1) * 0.06;
+    islandLabels.forEach((o) => {
+      const k = 1 + Math.sin(t * 2.2 + o.ph) * 0.07;
+      o.ring.scale.setScalar(k);
+      o.mat.opacity = 0.48 + Math.sin(t * 2.2 + o.ph) * 0.22;
+    });
+    const sk = 0.72 * (1 + Math.sin(t * 2.6) * 0.12);
+    capitalStar.scale.set(sk, sk, 1);
     camAz += (camTarget - camAz) * Math.min(1, dt * 5);
     const az = camAz + Math.sin(t * 0.25) * 0.08;
     cam.position.set(Math.sin(az) * camD, (3.6 * camD) / 10.2, Math.cos(az) * camD);

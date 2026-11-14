@@ -275,7 +275,7 @@ export default function VipTemplate({ user, items }: Props) {
               <Avatar
                 size={130}
                 src={user.avatarUrl}
-                style={{ border: `4px solid rgba(${COLORS.accent}, 0.9)`, position: "relative", zIndex: 1 }}
+                style={{ border: `4px solid #ff9f1c`, position: "relative", zIndex: 1 }}
               />
             </div>
 

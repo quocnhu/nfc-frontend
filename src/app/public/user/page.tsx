@@ -9,6 +9,8 @@ import RealEstateTemplate from '@/components/templates/RealEstateTemplate';
 import AccountingTemplate from '@/components/templates/AccountingTemplate';
 import LogisticsTemplate from '@/components/templates/LogisticsTemplate';
 import ItDevopsTemplate from '@/components/templates/ItDevopsTemplate';
+import TourGuideTemplate from '@/components/templates/TourGuideTemplate';
+import ItTemplate from '@/components/templates/ItTemplate';
 import SpeakerTemplate from '@/components/templates/SpeakerTemplate';
 
 const BG = '#0a0a0a';
@@ -155,6 +157,14 @@ function PublicUserPageContent() {
 
   if (componentKey === 'ItDevopsTemplate') {
     return <ItDevopsTemplate user={user} items={items} />;
+  }
+
+  if (componentKey === 'TourGuideTemplate') {
+    return <TourGuideTemplate user={user} items={items} />;
+  }
+
+  if (componentKey === 'ItTemplate') {
+    return <ItTemplate user={user} items={items} />;
   }
 
   if (componentKey === 'SpeakerTemplate') {

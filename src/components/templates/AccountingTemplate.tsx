@@ -88,8 +88,13 @@ const CSS = `
 .ac-template .card{position:fixed;z-index:5;left:0;right:0;bottom:0;max-height:58vh;max-height:58dvh;display:flex;flex-direction:column;border:1px solid var(--line);border-bottom:0;border-radius:28px 28px 0 0;background:var(--card);backdrop-filter:blur(16px);box-shadow:0 -20px 60px -24px rgba(0,60,30,.55);transition:max-height .35s ease}
 .ac-template .card.min{max-height:225px}
 .ac-template .scroll{overflow-y:auto;overscroll-behavior:contain;padding:56px 18px calc(18px + env(safe-area-inset-bottom,0px));scrollbar-width:thin}
-.ac-template .avatar{position:absolute;z-index:2;top:-48px;left:50%;margin-left:-48px;width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);background:#fff;box-shadow:0 8px 22px -8px rgba(0,0,0,.5);overflow:hidden}
-.ac-template .avatar svg,.ac-template .avatar img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+.ac-template .avatar{position:absolute;z-index:2;top:-48px;left:50%;margin-left:-48px;width:96px;height:96px;border-radius:50%;border:4px solid #ff9f1c;background:#fff;box-shadow:0 0 25px 8px color-mix(in srgb,var(--gold) 35%,transparent),0 0 60px 15px color-mix(in srgb,var(--gold) 15%,transparent),0 8px 22px -8px rgba(0,0,0,.5);animation:ac-avatar-pulse 3s ease-in-out infinite;will-change:transform}
+.ac-template .avatar svg,.ac-template .avatar img{position:relative;z-index:1;width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+.ac-template .avatar .halo{position:absolute;inset:0;border-radius:50%;border:2px solid color-mix(in srgb,var(--gold) 60%,transparent);animation:ac-avatar-ripple 2.4s ease-out infinite;pointer-events:none}
+.ac-template .avatar .halo:nth-child(2){animation-delay:.8s}
+.ac-template .avatar .halo:nth-child(3){animation-delay:1.6s}
+@keyframes ac-avatar-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes ac-avatar-ripple{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.6);opacity:0}}
 .ac-template .fold{position:absolute;z-index:3;top:12px;right:14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--text);display:grid;place-items:center;cursor:pointer}
 .ac-template .fold svg{width:22px;height:22px;fill:currentColor;transition:transform .3s}
 .ac-template .card.min .fold svg{transform:rotate(180deg)}
@@ -106,7 +111,9 @@ const CSS = `
 .ac-template .ico{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;font-size:19px;overflow:hidden}
 .ac-template .ico img{width:24px;height:24px;object-fit:contain}
 .ac-template .row span{font-size:15px;font-weight:600;line-height:1.3;word-break:break-word}
-.ac-template .note{margin-top:10px;text-align:center;font-size:11.5px;line-height:1.5;color:var(--muted)}
+.ac-template .nfc{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:11.5px;line-height:1.5;color:var(--muted)}
+.ac-template .nfc i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--gold);animation:ac-nfc-pulse 2s infinite}
+@keyframes ac-nfc-pulse{0%{box-shadow:0 0 0 0 var(--gold)}70%,100%{box-shadow:0 0 0 10px transparent}}
 @media (min-width:860px){
 .ac-template .card{left:auto;top:0;width:var(--panel);max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);box-shadow:-20px 0 60px -24px rgba(0,60,30,.55)}
 .ac-template .card.min{max-height:none}
@@ -114,9 +121,9 @@ const CSS = `
 .ac-template .scroll{padding:14px 24px 28px;flex:1}
 .ac-template .fold{display:none}
 .ac-template .bubble{left:calc((100% - var(--panel))/2)}
-.ac-template .who{text-align:left}.ac-template .bio{margin-left:0}.ac-template .chips{justify-content:flex-start}.ac-template h1{font-size:31px}.ac-template .note{text-align:left}
+.ac-template .who{text-align:left}.ac-template .bio{margin-left:0}.ac-template .chips{justify-content:flex-start}.ac-template h1{font-size:31px}
 }
-@media (prefers-reduced-motion:reduce){.ac-template .card{transition:none}}
+@media (prefers-reduced-motion:reduce){.ac-template .card{transition:none}.ac-template .avatar,.ac-template .avatar .halo,.ac-template .nfc i{animation:none}}
 `;
 
 export default function AccountingTemplate({ user, items }: TemplateProps) {
@@ -205,6 +212,9 @@ export default function AccountingTemplate({ user, items }: TemplateProps) {
 
       <main className={`card${folded ? " min" : ""}`} ref={cardRef}>
         <div className="avatar">
+          <span className="halo" aria-hidden="true" />
+          <span className="halo" aria-hidden="true" />
+          <span className="halo" aria-hidden="true" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={avatarSrc} alt={user.fullname} />
         </div>
@@ -252,7 +262,7 @@ export default function AccountingTemplate({ user, items }: TemplateProps) {
             })}
           </nav>
 
-          <p className="note">{s.note}</p>
+          <p className="nfc"><i /><span>{s.note}</span></p>
         </div>
       </main>
     </div>

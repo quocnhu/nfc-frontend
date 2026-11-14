@@ -87,7 +87,7 @@ const CARD_COLORS = [
   { bg: "rgba(16, 185, 129, 0.12)", border: "rgba(16, 185, 129, 0.35)", icon: "#34d399" },
   { bg: "rgba(245, 158, 11, 0.12)", border: "rgba(245, 158, 11, 0.35)", icon: "#fbbf24" },
   { bg: "rgba(239, 68, 68, 0.12)", border: "rgba(239, 68, 68, 0.35)", icon: "#f87171" },
-  { bg: "rgba(139, 92, 246, 0.12)", border: "rgba(139, 92, 246, 0.35)", icon: "#a78bfa" },
+  { bg: "rgba(139, 92, 246, 0.12)", border: "rgba(139, 92, 246, 0.35)", icon: "#ff9f1c" },
   { bg: "rgba(6, 182, 212, 0.12)", border: "rgba(6, 182, 212, 0.35)", icon: "#22d3ee" },
 ];
 
@@ -225,7 +225,7 @@ export default function UserTemplate({ user, items }: Props) {
             <Avatar
               size={110}
               src={user.avatarUrl}
-              style={{ border: `4px solid ${COLORS.accent}`, position: "relative", zIndex: 1, boxShadow: `0 4px 20px rgba(${COLORS.accentRgb}, 0.25)` }}
+              style={{ border: `4px solid #ff9f1c`, position: "relative", zIndex: 1, boxShadow: `0 4px 20px rgba(${COLORS.accentRgb}, 0.25)` }}
             />
           </div>
           <Title level={3} style={{ marginTop: 20, marginBottom: 4, color: COLORS.textPrimary, textShadow: "0 2px 10px rgba(79, 70, 229, 0.4), 0 0 20px rgba(255, 255, 255, 0.2)" }}>{user.fullname}</Title>

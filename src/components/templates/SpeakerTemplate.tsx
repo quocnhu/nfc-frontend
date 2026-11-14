@@ -24,14 +24,7 @@ const STRINGS = {
   vi: {
     role: "Diễn giả & Doanh nhân",
     bio: "Chia sẻ kỹ năng bán hàng và kinh nghiệm xây dựng kinh doanh từ những bước đầu tiên.",
-    chips: ["Kỹ năng bán hàng", "Khởi nghiệp", "Xây dựng đội nhóm", "Tư duy kinh doanh", "Quản lý dòng tiền"],
-    cta: "Mời tôi diễn thuyết",
-    share: "Chia sẻ thẻ này",
-    nfc: "Chạm điện thoại vào thẻ NFC để nhận liên hệ",
-    copied: "Đã sao chép thông tin liên hệ",
-    shared: "Đã chia sẻ",
-    fail: "Không chia sẻ được, hãy thử lại",
-    note: "Nội dung chia sẻ mang tính tham khảo. Kết quả kinh doanh phụ thuộc vào nhiều yếu tố và không có cam kết về thu nhập.",
+    note: "NFC Project, Designed by Nguyễn Quốc Nhu",
     hint: "Chạm vào diễn giả, khán giả hoặc màn hình nhé!",
     msgs: (n: string) => [
       `Xin chào mọi người! Mình là ${n}.`,
@@ -54,14 +47,7 @@ const STRINGS = {
   en: {
     role: "Speaker & Entrepreneur",
     bio: "Sharing sales skills and lessons from building a business, from the very first steps.",
-    chips: ["Sales skills", "Startups", "Team building", "Business mindset", "Cash-flow basics"],
-    cta: "Book me to speak",
-    share: "Share this card",
-    nfc: "Tap your phone on the NFC tag to receive this contact",
-    copied: "Contact details copied",
-    shared: "Shared",
-    fail: "Could not share, please try again",
-    note: "Content is shared for reference only. Business results depend on many factors and no income is promised or guaranteed.",
+    note: "NFC Project, Designed by Nguyễn Quốc Nhu",
     hint: "Tap the speaker, the audience or the screen!",
     msgs: (n: string) => [
       `Hello everyone! I'm ${n}.`,
@@ -104,8 +90,13 @@ const CSS = `
 .sp-template .card{position:fixed;z-index:5;left:0;right:0;bottom:0;max-height:50vh;max-height:50dvh;display:flex;flex-direction:column;border:1px solid var(--line);border-bottom:0;border-radius:28px 28px 0 0;background:var(--card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 -20px 60px -24px rgba(0,60,30,.55);transition:max-height .35s ease}
 .sp-template .card.min{max-height:225px}
 .sp-template .scroll{overflow-y:auto;overscroll-behavior:contain;padding:56px 18px calc(18px + env(safe-area-inset-bottom,0px));scrollbar-width:thin}
-.sp-template .avatar{position:absolute;z-index:2;top:-48px;left:50%;margin-left:-48px;width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);background:#fff;box-shadow:0 8px 22px -8px rgba(0,0,0,.5)}
-.sp-template .avatar svg,.sp-template .avatar img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+.sp-template .avatar{position:absolute;z-index:2;top:-48px;left:50%;margin-left:-48px;width:96px;height:96px;border-radius:50%;border:4px solid #ff9f1c;background:#fff;box-shadow:0 0 25px 8px color-mix(in srgb,var(--gold) 35%,transparent),0 0 60px 15px color-mix(in srgb,var(--gold) 15%,transparent),0 8px 22px -8px rgba(0,0,0,.5);animation:sp-avatar-pulse 3s ease-in-out infinite;will-change:transform}
+.sp-template .avatar svg,.sp-template .avatar img{position:relative;z-index:1;width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+.sp-template .avatar .halo{position:absolute;inset:0;border-radius:50%;border:2px solid color-mix(in srgb,var(--gold) 60%,transparent);animation:sp-avatar-ripple 2.4s ease-out infinite;pointer-events:none}
+.sp-template .avatar .halo:nth-child(2){animation-delay:.8s}
+.sp-template .avatar .halo:nth-child(3){animation-delay:1.6s}
+@keyframes sp-avatar-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes sp-avatar-ripple{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.6);opacity:0}}
 .sp-template .fold{position:absolute;z-index:3;top:12px;right:14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--text);display:grid;place-items:center;cursor:pointer}
 .sp-template .fold svg{width:22px;height:22px;fill:currentColor;transition:transform .3s}
 .sp-template .card.min .fold svg{transform:rotate(180deg)}
@@ -115,23 +106,19 @@ const CSS = `
 .sp-template h1{margin-top:6px;font-size:25px;font-weight:800;line-height:1.2}
 .sp-template .role{margin-top:2px;color:var(--gold);font-size:15.5px;font-weight:700}
 .sp-template .bio{margin:7px auto 0;max-width:36ch;color:var(--muted);font-size:14px;line-height:1.5}
-.sp-template .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:10px}
-.sp-template .chip{padding:2px 11px;border-radius:999px;border:1px solid var(--line);font-size:12.5px;font-weight:600;background:color-mix(in srgb,var(--brand) 14%,transparent)}
 .sp-template .rows{display:grid;gap:10px;margin-top:16px}
 .sp-template .row{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:16px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--bg) 45%,transparent);transition:border-color .2s,transform .2s}
 .sp-template a.row:hover,.sp-template a.row:active{border-color:var(--gold);transform:translateY(-1px)}
 .sp-template .ico{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;font-size:19px}
 .sp-template .ico svg{width:19px;height:19px;fill:currentColor}
 .sp-template .ico img{width:24px;height:24px;object-fit:contain}
-.sp-template .row small{display:block;color:var(--muted);font-size:12px;line-height:1.2}
-.sp-template .row span{font-size:15px;font-weight:600;line-height:1.3;word-break:break-word}
+.sp-template .row span{font-size:16px;font-weight:600;line-height:1.25;word-break:break-word}
 .sp-template .btn{display:block;width:100%;margin-top:14px;padding:12px;border:0;border-radius:16px;font:inherit;font-weight:800;font-size:15.5px;text-align:center;text-decoration:none;cursor:pointer;color:#fff;background:linear-gradient(90deg,var(--brand),color-mix(in srgb,var(--brand) 55%,#7fd36b))}
 .sp-template .btn.ghost{margin-top:10px;background:transparent;color:var(--text);border:1px solid var(--line);font-weight:700}
 .sp-template .toast{margin-top:8px;text-align:center;font-size:13px;color:var(--gold);min-height:19px}
-.sp-template .nfc{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--muted);margin-top:4px}
-.sp-template .nfc i{width:8px;height:8px;border-radius:50%;background:var(--gold);animation:sp-pulse 2s infinite}
+.sp-template .nfc{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:10px}
+.sp-template .nfc i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--gold);animation:sp-pulse 2s infinite}
 @keyframes sp-pulse{0%{box-shadow:0 0 0 0 var(--gold)}70%,100%{box-shadow:0 0 0 10px transparent}}
-.sp-template .note{margin-top:10px;text-align:center;font-size:11.5px;line-height:1.5;color:var(--muted)}
 @media (min-width:860px){
 .sp-template .card{left:auto;top:0;width:var(--panel);max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);box-shadow:-20px 0 60px -24px rgba(0,60,30,.55)}
 .sp-template .card.min{max-height:none}
@@ -139,10 +126,9 @@ const CSS = `
 .sp-template .scroll{padding:14px 24px 28px;flex:1}
 .sp-template .fold{display:none}
 .sp-template .bubble{left:calc((100% - var(--panel))/2)}
-.sp-template .nfc{justify-content:flex-start}
-.sp-template .who{text-align:left}.sp-template .bio{margin-left:0}.sp-template .chips{justify-content:flex-start}.sp-template h1{font-size:31px}.sp-template .note{text-align:left}
+.sp-template .who{text-align:left}.sp-template .bio{margin-left:0}.sp-template h1{font-size:31px}
 }
-@media (prefers-reduced-motion:reduce){.sp-template .nfc i{animation:none}.sp-template .card{transition:none}}
+@media (prefers-reduced-motion:reduce){.sp-template .nfc i,.sp-template .avatar,.sp-template .avatar .halo{animation:none}.sp-template .card{transition:none}}
 `;
 
 interface Info {
@@ -163,13 +149,11 @@ export default function SpeakerTemplate({ user, items }: TemplateProps) {
     return (navigator.language || "").toLowerCase().startsWith("vi") ? "vi" : "en";
   });
   const [folded, setFolded] = useState(false);
-  const [toast, setToast] = useState("");
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cardRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const langRef = useRef<Lang>(lang);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     langRef.current = lang;
@@ -192,10 +176,6 @@ export default function SpeakerTemplate({ user, items }: TemplateProps) {
       document.title = prev;
     };
   }, [lang, user.fullname, user.role?.name]);
-
-  useEffect(() => () => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-  }, []);
 
   const roleLabel = formatRole(user.role?.name);
 
@@ -258,25 +238,6 @@ export default function SpeakerTemplate({ user, items }: TemplateProps) {
 
   const s = STRINGS[lang];
 
-  const onShare = async () => {
-    const data = { title: user.fullname, text: `${user.fullname} – ${roleLabel}`, url: window.location.href };
-    try {
-      if (navigator.share) {
-        await navigator.share(data);
-        setToast(s.shared);
-      } else {
-        await navigator.clipboard.writeText(`${user.fullname}\n${roleLabel} · ${s.role}\n${info.phoneText}\n${info.emailText}`);
-        setToast(s.copied);
-      }
-    } catch {
-      setToast(s.fail);
-    }
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 2600);
-  };
-
-  const bookHref = info.phone || info.email || "#";
-
   return (
     <div className="sp-template">
       <style>{CSS}</style>
@@ -291,6 +252,9 @@ export default function SpeakerTemplate({ user, items }: TemplateProps) {
 
       <main className={`card${folded ? " min" : ""}`} ref={cardRef}>
         <div className="avatar">
+          <span className="halo" aria-hidden="true" />
+          <span className="halo" aria-hidden="true" />
+          <span className="halo" aria-hidden="true" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={avatarSrc} alt={user.fullname} />
         </div>
@@ -303,9 +267,6 @@ export default function SpeakerTemplate({ user, items }: TemplateProps) {
             <h1>{user.fullname}</h1>
             <p className="role">{s.role}</p>
             <p className="bio">{s.bio}</p>
-            <div className="chips">
-              {s.chips.map((c) => <span className="chip" key={c}>{c}</span>)}
-            </div>
           </section>
 
           <nav className="rows">
@@ -323,26 +284,17 @@ export default function SpeakerTemplate({ user, items }: TemplateProps) {
                       <span aria-hidden>{EMOJI[row.kind]}</span>
                     )}
                   </div>
-                  <div><small>{row.label}</small><span>{row.text}</span></div>
+                  <div><span>{row.label}</span></div>
                 </>
               );
 
-              const external = row.href && /^https?:\/\//i.test(row.href);
-              return row.href ? (
-                <a className="row" key={row.id} href={row.href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
-                  {inner}
-                </a>
-              ) : (
+              return (
                 <div className="row" key={row.id}>{inner}</div>
               );
             })}
           </nav>
 
-          <a className="btn" href={bookHref}>{s.cta}</a>
-          <button className="btn ghost" type="button" onClick={onShare}>{s.share}</button>
-          <p className="toast" role="status">{toast}</p>
-          <p className="nfc"><i /><span>{s.nfc}</span></p>
-          <p className="note">{s.note}</p>
+          <p className="nfc"><i /><span>{s.note}</span></p>
         </div>
       </main>
     </div>

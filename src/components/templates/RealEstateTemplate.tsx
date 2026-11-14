@@ -152,8 +152,13 @@ const CSS = `
 .re-template .card{position:fixed;z-index:5;left:0;right:0;bottom:0;max-height:58vh;max-height:58dvh;display:flex;flex-direction:column;border:1px solid var(--line);border-bottom:0;border-radius:28px 28px 0 0;background:var(--card);backdrop-filter:blur(16px);box-shadow:0 -20px 60px -24px rgba(0,60,30,.55);transition:max-height .35s ease}
 .re-template .card.min{max-height:225px}
 .re-template .scroll{overflow-y:auto;overscroll-behavior:contain;padding:56px 18px calc(18px + env(safe-area-inset-bottom,0px));scrollbar-width:thin}
-.re-template .avatar{position:absolute;z-index:2;top:-48px;left:50%;margin-left:-48px;width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);background:#fff;box-shadow:0 8px 22px -8px rgba(0,0,0,.5);overflow:hidden}
-.re-template .avatar svg,.re-template .avatar img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+.re-template .avatar{position:absolute;z-index:2;top:-48px;left:50%;margin-left:-48px;width:96px;height:96px;border-radius:50%;border:4px solid #ff9f1c;background:#fff;box-shadow:0 0 25px 8px color-mix(in srgb,var(--gold) 35%,transparent),0 0 60px 15px color-mix(in srgb,var(--gold) 15%,transparent),0 8px 22px -8px rgba(0,0,0,.5);animation:re-avatar-pulse 3s ease-in-out infinite;will-change:transform}
+.re-template .avatar svg,.re-template .avatar img{position:relative;z-index:1;width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+.re-template .avatar .halo{position:absolute;inset:0;border-radius:50%;border:2px solid color-mix(in srgb,var(--gold) 60%,transparent);animation:re-avatar-ripple 2.4s ease-out infinite;pointer-events:none}
+.re-template .avatar .halo:nth-child(2){animation-delay:.8s}
+.re-template .avatar .halo:nth-child(3){animation-delay:1.6s}
+@keyframes re-avatar-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes re-avatar-ripple{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.6);opacity:0}}
 .re-template .fold{position:absolute;z-index:3;top:12px;right:14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--text);display:grid;place-items:center;cursor:pointer}
 .re-template .fold svg{width:22px;height:22px;fill:currentColor;transition:transform .3s}
 .re-template .card.min .fold svg{transform:rotate(180deg)}
@@ -180,7 +185,7 @@ const CSS = `
 .re-template .bubble{left:calc((100% - var(--panel))/2)}
 .re-template .who{text-align:left}.re-template .bio{margin-left:0}.re-template .chips{justify-content:flex-start}.re-template h1{font-size:31px}.re-template .note{text-align:left}
 }
-@media (prefers-reduced-motion:reduce){.re-template .card{transition:none}}
+@media (prefers-reduced-motion:reduce){.re-template .card{transition:none}.re-template .avatar,.re-template .avatar .halo{animation:none}}
 `;
 
 function formatRole(name?: string): string {
@@ -346,6 +351,9 @@ export default function RealEstateTemplate({ user, items }: Props) {
 
       <main className={`card${folded ? " min" : ""}`} ref={cardRef}>
         <div className="avatar">
+          <span className="halo" aria-hidden="true" />
+          <span className="halo" aria-hidden="true" />
+          <span className="halo" aria-hidden="true" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={avatarSrc} alt={user.fullname} />
         </div>

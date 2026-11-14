@@ -237,6 +237,21 @@ export default function VipTemplate({ user, items }: Props) {
           0% { opacity: 0; }
           100% { opacity: 1; }
         }
+        @keyframes nfc-dot-pulse {
+          0% { box-shadow: 0 0 0 0 #ffd166; }
+          70%, 100% { box-shadow: 0 0 0 10px transparent; }
+        }
+        .nfc-dot {
+          flex: none;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #ffd166;
+          animation: nfc-dot-pulse 2s infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nfc-dot { animation: none; }
+        }
         .template-item {
           transition: transform 0.2s ease;
         }
@@ -368,8 +383,9 @@ export default function VipTemplate({ user, items }: Props) {
 
       {/* Bottom: Footer */}
       <div
-        style={{ textAlign: "center", padding: "20px 0 12px", position: "relative", zIndex: 1, animation: "fadeIn 0.5s ease-out 0.6s backwards" }}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: "20px 0 12px", position: "relative", zIndex: 1, animation: "fadeIn 0.5s ease-out 0.6s backwards" }}
       >
+        <span className="nfc-dot" />
         <Text style={{ color: COLORS.textTertiary, fontSize: 12, letterSpacing: 0.3, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
           {t.designedBy} <span style={{ color: COLORS.textSecondary, fontWeight: 600 }}>Nguyen Quoc Nhu</span> - <span style={{ color: `rgb(${COLORS.accent})`, fontWeight: 500 }}>NFC Tap</span>
         </Text>

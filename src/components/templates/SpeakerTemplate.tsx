@@ -122,11 +122,11 @@ const CSS = `
 @media (min-width:860px){
 .sp-template .card{left:auto;top:0;width:var(--panel);max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);box-shadow:-20px 0 60px -24px rgba(0,60,30,.55)}
 .sp-template .card.min{max-height:none}
-.sp-template .avatar{position:relative;top:auto;left:auto;margin:30px 0 0 24px}
+.sp-template .avatar{position:relative;top:auto;left:auto;margin:30px auto 0}
 .sp-template .scroll{padding:14px 24px 28px;flex:1}
 .sp-template .fold{display:none}
 .sp-template .bubble{left:calc((100% - var(--panel))/2)}
-.sp-template .who{text-align:left}.sp-template .bio{margin-left:0}.sp-template h1{font-size:31px}
+.sp-template .who{text-align:center}.sp-template .bio{margin-left:auto}.sp-template h1{font-size:31px}
 }
 @media (prefers-reduced-motion:reduce){.sp-template .nfc i,.sp-template .avatar,.sp-template .avatar .halo{animation:none}.sp-template .card{transition:none}}
 `;

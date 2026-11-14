@@ -117,11 +117,11 @@ const CSS = `
 @media (min-width:860px){
 .ac-template .card{left:auto;top:0;width:var(--panel);max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);box-shadow:-20px 0 60px -24px rgba(0,60,30,.55)}
 .ac-template .card.min{max-height:none}
-.ac-template .avatar{position:relative;top:auto;left:auto;margin:30px 0 0 24px}
+.ac-template .avatar{position:relative;top:auto;left:auto;margin:30px auto 0}
 .ac-template .scroll{padding:14px 24px 28px;flex:1}
 .ac-template .fold{display:none}
 .ac-template .bubble{left:calc((100% - var(--panel))/2)}
-.ac-template .who{text-align:left}.ac-template .bio{margin-left:0}.ac-template .chips{justify-content:flex-start}.ac-template h1{font-size:31px}
+.ac-template .who{text-align:center}.ac-template .bio{margin-left:auto}.ac-template .chips{justify-content:center}.ac-template h1{font-size:31px}
 }
 @media (prefers-reduced-motion:reduce){.ac-template .card{transition:none}.ac-template .avatar,.ac-template .avatar .halo,.ac-template .nfc i{animation:none}}
 `;

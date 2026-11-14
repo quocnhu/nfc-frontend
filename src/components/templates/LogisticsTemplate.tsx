@@ -115,11 +115,11 @@ const CSS = `
 @media (min-width:860px){
 .lg-template .card{left:auto;top:0;width:var(--panel);max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);box-shadow:-20px 0 60px -24px rgba(0,60,30,.55)}
 .lg-template .card.min{max-height:none}
-.lg-template .avatar{position:relative;top:auto;left:auto;margin:30px 0 0 24px}
+.lg-template .avatar{position:relative;top:auto;left:auto;margin:30px auto 0}
 .lg-template .scroll{padding:14px 24px 28px;flex:1}
 .lg-template .fold{display:none}
 .lg-template .bubble{left:calc((100% - var(--panel))/2)}
-.lg-template .who{text-align:left}.lg-template .bio{margin-left:0}.lg-template .chips{justify-content:flex-start}.lg-template h1{font-size:31px}
+.lg-template .who{text-align:center}.lg-template .bio{margin-left:auto}.lg-template .chips{justify-content:center}.lg-template h1{font-size:31px}
 }
 @media (prefers-reduced-motion:reduce){.lg-template .card{transition:none}.lg-template .avatar,.lg-template .avatar .halo{animation:none}}
 `;

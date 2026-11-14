@@ -236,11 +236,11 @@ const CSS = `
 @media (min-width:860px){
 .it-template .card{left:auto;top:0;width:var(--panel);max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);box-shadow:-20px 0 60px -24px rgba(0,30,50,.5)}
 .it-template .card.min{max-height:none}
-.it-template .avatar{position:relative;top:auto;left:auto;margin:30px 0 0 24px}
+.it-template .avatar{position:relative;top:auto;left:auto;margin:30px auto 0}
 .it-template .scroll{padding:14px 24px 28px;flex:1}
 .it-template .fold{display:none}
 .it-template .switch,.it-template .bubble{left:calc((100% - var(--panel))/2)}
-.it-template .who{text-align:left}.it-template .bio{margin-left:0}.it-template .chips{justify-content:flex-start}.it-template h1{font-size:34px}
+.it-template .who{text-align:center}.it-template .bio{margin-left:auto}.it-template .chips{justify-content:center}.it-template h1{font-size:34px}
 .it-template .stage.dev + .card{box-shadow:-14px 0 70px -18px rgba(118,185,0,.45),inset 1px 0 0 rgba(180,255,120,.25)}
 }
 @media (prefers-reduced-motion:reduce){.it-template .card{transition:none}.it-template .avatar,.it-template .avatar .halo,.it-template .nfc i{animation:none}}

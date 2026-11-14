@@ -175,17 +175,19 @@ const CSS = `
 .re-template .ico{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;font-size:19px;overflow:hidden}
 .re-template .ico img{width:24px;height:24px;object-fit:contain}
 .re-template .row span{font-size:15px;font-weight:600;line-height:1.3;word-break:break-word}
-.re-template .note{margin-top:10px;text-align:center;font-size:11.5px;line-height:1.5;color:var(--muted)}
+.re-template .nfc{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:11.5px;line-height:1.5;color:var(--muted)}
+.re-template .nfc i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--gold);animation:re-nfc-pulse 2s infinite}
+@keyframes re-nfc-pulse{0%{box-shadow:0 0 0 0 var(--gold)}70%,100%{box-shadow:0 0 0 10px transparent}}
 @media (min-width:860px){
 .re-template .card{left:auto;top:0;width:var(--panel);max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);box-shadow:-20px 0 60px -24px rgba(0,60,30,.55)}
 .re-template .card.min{max-height:none}
-.re-template .avatar{position:relative;top:auto;left:auto;margin:30px 0 0 24px}
+.re-template .avatar{position:relative;top:auto;left:auto;margin:30px auto 0}
 .re-template .scroll{padding:14px 24px 28px;flex:1}
 .re-template .fold{display:none}
 .re-template .bubble{left:calc((100% - var(--panel))/2)}
-.re-template .who{text-align:left}.re-template .bio{margin-left:0}.re-template .chips{justify-content:flex-start}.re-template h1{font-size:31px}.re-template .note{text-align:left}
+.re-template .who{text-align:center}.re-template .bio{margin-left:auto}.re-template .chips{justify-content:center}.re-template h1{font-size:31px}.re-template .nfc{justify-content:center}
 }
-@media (prefers-reduced-motion:reduce){.re-template .card{transition:none}.re-template .avatar,.re-template .avatar .halo{animation:none}}
+@media (prefers-reduced-motion:reduce){.re-template .card{transition:none}.re-template .avatar,.re-template .avatar .halo,.re-template .nfc i{animation:none}}
 `;
 
 function formatRole(name?: string): string {
@@ -425,7 +427,7 @@ export default function RealEstateTemplate({ user, items }: Props) {
             })}
           </nav>
 
-          <p className="note">{s.note}</p>
+          <p className="nfc"><i /><span>{s.note}</span></p>
         </div>
       </main>
     </div>

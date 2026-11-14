@@ -186,6 +186,21 @@ export default function UserTemplate({ user, items }: Props) {
           0% { opacity: 0; transform: translateY(20px); }
           100% { opacity: 1; transform: translateY(0); }
         }
+        @keyframes nfc-dot-pulse {
+          0% { box-shadow: 0 0 0 0 #ffd166; }
+          70%, 100% { box-shadow: 0 0 0 10px transparent; }
+        }
+        .nfc-dot {
+          flex: none;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #ffd166;
+          animation: nfc-dot-pulse 2s infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nfc-dot { animation: none; }
+        }
         .template-item {
           transition: transform 0.2s ease;
         }
@@ -309,7 +324,8 @@ export default function UserTemplate({ user, items }: Props) {
           })}
         </Flex>
 
-        <div style={{ textAlign: "center", marginTop: "auto", paddingTop: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: "auto", paddingTop: 24 }}>
+          <span className="nfc-dot" />
           <Text style={{ color: COLORS.textTertiary, fontSize: 12, textShadow: "0 2px 8px rgba(0,0,0,0.6)" }}>
             {t.designedBy} <span style={{ color: COLORS.accent, fontWeight: 600 }}>Nguyen Quoc Nhu</span> - <span style={{ color: COLORS.textSecondary, fontWeight: 500 }}>NFC Tap</span>
           </Text>

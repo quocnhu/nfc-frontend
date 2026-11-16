@@ -23,6 +23,14 @@ import type { User, Role, Permission } from "@/types";
 
 const Cropper = dynamic(() => import("react-easy-crop").then(mod => mod.default), { ssr: false });
 
+const normalizeText = (value: unknown) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
+
 export default function UsersPage() {
   const { uploadAvatarForUser, selectAvatar } = useAvatarSync();
   const [users, setUsers] = useState<User[]>([]);
@@ -634,9 +642,11 @@ export default function UsersPage() {
         )
       ),
     },
-    { title: "Fullname", dataIndex: "fullname", key: "fullname", align: 'center' as const, filterSearch: true,
+    { title: "Fullname", dataIndex: "fullname", key: "fullname", align: 'center' as const,
+      filterSearch: (input: string, record: { text: any; value: any }) =>
+        normalizeText(record.text).includes(normalizeText(input)),
       filters: [...new Set(users.map((u) => u.fullname))].map((n) => ({ text: n, value: n })),
-      onFilter: (value: any, record: User) => record.fullname.includes(value),
+      onFilter: (value: any, record: User) => normalizeText(record.fullname).includes(normalizeText(value)),
     },
     { title: "Email", dataIndex: "email", key: "email", align: 'center' as const, filterSearch: true,
       filters: [...new Set(users.map((u) => u.email))].map((n) => ({ text: n, value: n })),

@@ -358,8 +358,6 @@ export const paymentApi = {
     api.get<ApiResponse<Payment[]>>('/payment/all'),
   status: () =>
     api.get<ApiResponse<PaymentStatus>>('/payment/status'),
-  publicStatus: (userId: string) =>
-    api.get<ApiResponse<PaymentStatus>>("/payment/public-status", { params: { userId } }),
   // Admin subscription management
   subscriptions: (startDate?: string, endDate?: string) =>
     api.get<ApiResponse<UserSubscription[] | { subscriptions: UserSubscription[]; counts: { total: number; active: number; expired: number }; period: string }>>('/subscriptions', { params: startDate && endDate ? { startDate, endDate } : undefined }),

@@ -105,6 +105,14 @@ export interface DashboardStats {
   totalPermissions: number;
   totalSharingContent: number;
   totalHistories: number;
+  userTypeStats?: {
+    LOCAL: number;
+    GOOGLE: number;
+  };
+  usersByRole?: {
+    role: string;
+    count: number;
+  }[];
 }
 
 export interface RequestCounts {

@@ -19,6 +19,7 @@ import {
   SafetyCertificateOutlined,
   DollarOutlined,
   CrownOutlined,
+  GoogleOutlined,
 } from "@ant-design/icons";
 import { dashboardApi } from "@/lib/api";
 import { extractApiError } from "@/lib/api-error";
@@ -108,20 +109,14 @@ export default function DashboardPage() {
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-    const [statsRes, activityRes, suspiciousRes, subRes, payRes, growthRes] = await Promise.all([
-      dashboardApi.stats().catch(() => null),
-      dashboardApi.activity(20).catch(() => null),
-      dashboardApi.suspicious().catch(() => null),
-      dashboardApi.subscriptionStats().catch(() => null),
-      dashboardApi.paymentStats().catch(() => null),
-      dashboardApi.growth().catch(() => null),
-    ]);
-    setStats(statsRes?.data?.data || null);
-    setActivity(activityRes?.data?.data || []);
-    setSuspicious(suspiciousRes?.data?.data || null);
-    setSubscriptionStats(subRes?.data?.data || null);
-    setPaymentStats(payRes?.data?.data || null);
-    setGrowthData(growthRes?.data?.data || null);
+      await Promise.allSettled([
+        dashboardApi.stats().then((res) => setStats(res?.data?.data || null)).catch(() => setStats(null)),
+        dashboardApi.activity(20).then((res) => setActivity(res?.data?.data || [])).catch(() => setActivity([])),
+        dashboardApi.suspicious().then((res) => setSuspicious(res?.data?.data || null)).catch(() => setSuspicious(null)),
+        dashboardApi.subscriptionStats().then((res) => setSubscriptionStats(res?.data?.data || null)).catch(() => setSubscriptionStats(null)),
+        dashboardApi.paymentStats().then((res) => setPaymentStats(res?.data?.data || null)).catch(() => setPaymentStats(null)),
+        dashboardApi.growth().then((res) => setGrowthData(res?.data?.data || null)).catch(() => setGrowthData(null)),
+      ]);
     } finally {
       setRefreshing(false);
       setInitialLoading(false);
@@ -183,6 +178,131 @@ export default function DashboardPage() {
             />
           </Col>
         ))}
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24} lg={12}>
+          <SectionCard
+            title={
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <GoogleOutlined style={{ color: "#ea4335" }} />
+                <span>Users by Source</span>
+              </div>
+            }
+          >
+            {(() => {
+              const local = stats?.userTypeStats?.LOCAL ?? 0;
+              const google = stats?.userTypeStats?.GOOGLE ?? 0;
+              const total = local + google;
+              const localPct = total > 0 ? Math.round((local / total) * 100) : 0;
+              const googlePct = total > 0 ? 100 - localPct : 0;
+              return (
+                <>
+                  <Row gutter={[16, 16]}>
+                    <Col xs={12}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 28, fontWeight: 700, color: "#1677ff" }}>{local}</div>
+                        <div style={{ fontSize: 12, color: isDark ? "#a0a0b0" : "#6e6e73" }}>LOCAL</div>
+                      </div>
+                    </Col>
+                    <Col xs={12}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 28, fontWeight: 700, color: "#ea4335" }}>{google}</div>
+                        <div style={{ fontSize: 12, color: isDark ? "#a0a0b0" : "#6e6e73" }}>GOOGLE</div>
+                      </div>
+                    </Col>
+                  </Row>
+                  <div
+                    style={{
+                      display: "flex",
+                      height: 10,
+                      borderRadius: 6,
+                      overflow: "hidden",
+                      marginTop: 16,
+                      background: isDark ? "#2e2e40" : "#f0f0f5",
+                    }}
+                  >
+                    {local > 0 && <div style={{ width: `${localPct}%`, background: "#1677ff" }} />}
+                    {google > 0 && <div style={{ width: `${googlePct}%`, background: "#ea4335" }} />}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: 8,
+                      fontSize: 12,
+                      color: isDark ? "#a0a0b0" : "#6e6e73",
+                    }}
+                  >
+                    <span>Local {localPct}%</span>
+                    <span>Google {googlePct}%</span>
+                  </div>
+                </>
+              );
+            })()}
+          </SectionCard>
+        </Col>
+        <Col xs={24} lg={12}>
+          <SectionCard
+            title={
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <TeamOutlined style={{ color: "#0ea5e9" }} />
+                <span>Users by Role</span>
+              </div>
+            }
+          >
+            {(stats?.usersByRole ?? []).length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: 16,
+                  color: isDark ? "#a0a0b0" : "#6e6e73",
+                  fontSize: 13,
+                }}
+              >
+                No role data
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {(stats?.usersByRole ?? []).map((item) => {
+                  const total = stats?.totalUsers || 1;
+                  const pct = Math.round((item.count / total) * 100);
+                  return (
+                    <div key={item.role}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: 4,
+                          fontSize: 13,
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>{item.role}</span>
+                        <span style={{ color: isDark ? "#a0a0b0" : "#6e6e73" }}>{item.count}</span>
+                      </div>
+                      <div
+                        style={{
+                          height: 8,
+                          borderRadius: 4,
+                          overflow: "hidden",
+                          background: isDark ? "#2e2e40" : "#f0f0f5",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${pct}%`,
+                            background: "linear-gradient(90deg, #0ea5e9, #4f46e5)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </SectionCard>
+        </Col>
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>

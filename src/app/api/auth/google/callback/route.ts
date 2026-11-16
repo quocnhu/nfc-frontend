@@ -7,8 +7,26 @@ const SECURE_COOKIES = process.env.NODE_ENV === "production";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const accessToken = searchParams.get("access_token");
-  const refreshToken = searchParams.get("refresh_token");
+  const code = searchParams.get("code");
+
+  if (!code) {
+    return NextResponse.redirect(new URL("/login?error=google_auth_failed", req.url));
+  }
+
+  const exchangeRes = await fetch(`${BACKEND_URL}/api/auth/exchange`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+    cache: "no-store",
+  });
+
+  if (!exchangeRes.ok) {
+    return NextResponse.redirect(new URL("/login?error=google_auth_failed", req.url));
+  }
+
+  const exchangeData = await exchangeRes.json().catch(() => ({}));
+  const accessToken = exchangeData?.data?.access_token;
+  const refreshToken = exchangeData?.data?.refresh_token;
 
   if (!accessToken) {
     return NextResponse.redirect(new URL("/login?error=google_auth_failed", req.url));
@@ -45,10 +63,8 @@ export async function GET(req: Request) {
     maxAge: SESSION_MAX_AGE,
   });
 
-  // Tokens were consumed from the query string above; redirect to a clean path so
-  // they are never echoed back in the browser URL/history.
-  // Ideal fix (requires backend changes): have the backend issue a one-time code
-  // instead of putting tokens in the URL, and exchange it here.
+  // The one-time code was single-use; send the browser to a clean path so no
+  // credential material is ever present in the URL/history.
   const response = NextResponse.redirect(new URL("/dashboard", req.url));
 
   response.cookies.set("next-auth.session-token", nextAuthToken, {

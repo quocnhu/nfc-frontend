@@ -21,6 +21,7 @@ import {
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { WelcomeBot } from "@/components/common/WelcomeBot";
 import { homepageApi, type PublicHomepageData } from "@/lib/api";
 import { SiDocker, SiKubernetes, SiTerraform, SiPrometheus, SiGrafana, SiArgo, SiCircleci, SiJenkins, SiCisco, SiLinux, SiVmware, SiProxmox, SiGooglecloud, SiGnubash } from "react-icons/si";
 import { FaAws, FaMicrosoft } from "react-icons/fa6";
@@ -950,7 +951,7 @@ export default function HomePage() {
                     {[...Array(5)].map((_, i) => <StarFilled key={i} style={{ color: "#ffd93d" }} />)}
                   </div>
                   <Text style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>
-                    "Every journey is a story waiting to be told."
+                    {'"Every journey is a story waiting to be told."'}
                   </Text>
                 </div>
               </div>
@@ -970,6 +971,8 @@ export default function HomePage() {
           &copy; 2026 Nguyễn Quốc Nhu &mdash; Built with passion for IT &amp; Travel
         </Paragraph>
       </footer>
+
+      <WelcomeBot />
     </div>
   );
 }

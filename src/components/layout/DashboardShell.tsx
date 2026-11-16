@@ -350,6 +350,18 @@ export function DashboardShell({
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .app-header {
+            padding: 0 10px !important;
+          }
+        }
+        @media (max-width: 576px) {
+          .app-header .header-welcome {
+            display: none !important;
+          }
+        }
+      `}</style>
       <RouteLoader />
       <Sider
         collapsible
@@ -536,6 +548,7 @@ export function DashboardShell({
 
       <Layout>
         <Header
+          className="app-header"
           style={{
             padding: "0 20px",
             height: 56,
@@ -543,6 +556,7 @@ export function DashboardShell({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 12,
             background: isDark ? "#1a1a2e" : "#ffffff",
             borderBottom: isDark ? "1px solid #2e2e40" : "1px solid #e5e5ea",
             boxShadow: isDark
@@ -550,19 +564,31 @@ export function DashboardShell({
               : "0 1px 4px rgba(0,0,0,0.06)",
           }}
         >
-          <Space size={16}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              flex: 1,
+              minWidth: 0,
+              overflow: "hidden",
+            }}
+          >
             <Button
               type="text"
               icon={
                 collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
               }
               onClick={() => setCollapsed(!collapsed)}
-              style={{ fontSize: 16 }}
+              style={{ fontSize: 16, flexShrink: 0 }}
             />
             {user && (
               <Typography.Text
+                className="header-welcome"
+                ellipsis
                 style={{
                   fontSize: 14,
+                  minWidth: 0,
                   color: isDark ? "#a0a0b0" : "#6e6e73",
                 }}
               >
@@ -577,9 +603,9 @@ export function DashboardShell({
                 </span>
               </Typography.Text>
             )}
-          </Space>
+          </div>
 
-          <Space size={12}>
+          <Space size={12} style={{ flexShrink: 0 }}>
             <Popover
               content={notificationContent}
               trigger="click"

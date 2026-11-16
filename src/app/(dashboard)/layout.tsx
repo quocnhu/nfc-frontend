@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       const res = await fetch(`${BACKEND}/api/dashboard/permissions`, {
         headers: { Cookie: `jwt=${jwt}` },
         cache: "no-store",
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(10000),
       });
       if (res.ok) {
         const body = await res.json();

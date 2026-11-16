@@ -81,7 +81,7 @@ export const roleApi = {
   list: () => api.get<ApiResponse<Role[]>>("/roles"),
   create: (data: { name: string }) =>
     api.post<ApiResponse<Role>>("/roles", data),
-  update: (data: { id: string; name?: string; permissionIds?: string[] }) =>
+  update: (data: { id: string; name?: string; permissionIds?: string[]; templateIds?: string[] }) =>
     api.post<ApiResponse<Role>>("/roles/update", data),
   remove: (id: string) =>
     api.post<ApiResponse>("/roles/delete", { id }),
@@ -120,6 +120,7 @@ export const sharingApi = {
 };
 
 export const templateApi = {
+  list: () => api.get<ApiResponse<Template[]>>("/templates"),
   mine: () => api.get<ApiResponse<MyTemplates>>("/templates/me"),
   select: (templateId: string) =>
     api.post<ApiResponse<Template>>("/templates/me/select", { templateId }),

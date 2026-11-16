@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Table, Button, Modal, Form, Input, Space, message, Popconfirm, Typography, AutoComplete, Select, Tooltip, Segmented, Tag, Empty, Spin } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, YoutubeOutlined, TikTokOutlined, FacebookOutlined, InstagramOutlined, LinkedinOutlined, TwitterOutlined, GithubOutlined, GlobalOutlined, MailOutlined, PhoneOutlined, StarOutlined, LinkOutlined as LinkIconOutlined, AppstoreOutlined, EyeOutlined } from "@ant-design/icons";
-import { sharingApi, dashboardApi, userApi, uploadApi, templateApi } from "@/lib/api";
+import { Table, Button, Modal, Form, Input, Space, message, Popconfirm, Typography, AutoComplete, Select, Tooltip, Segmented, Tag, Empty, Spin, Checkbox } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, YoutubeOutlined, TikTokOutlined, FacebookOutlined, InstagramOutlined, LinkedinOutlined, TwitterOutlined, GithubOutlined, GlobalOutlined, MailOutlined, PhoneOutlined, StarOutlined, LinkOutlined as LinkIconOutlined, AppstoreOutlined, EyeOutlined, TeamOutlined, SearchOutlined } from "@ant-design/icons";
+import { sharingApi, dashboardApi, userApi, uploadApi, templateApi, roleApi } from "@/lib/api";
 import { safeUrl } from "@/lib/safe-url";
 import { getPublicBaseUrl } from "@/lib/public-url";
 import { formatDate } from "@/utils/helpers";
-import type { SharingContent, User, Template } from "@/types";
+import type { SharingContent, User, Template, Role } from "@/types";
 import PhoneInput from "@/components/PhoneInput";
 
 interface IconItem {
@@ -54,10 +54,28 @@ export default function SharingContentPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [urlType, setUrlType] = useState<string>("link");
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState("");
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [selectingTemplateId, setSelectingTemplateId] = useState<string | null>(null);
+
+  const filteredTemplates = useMemo(() => {
+    const query = templateSearch.trim().toLowerCase();
+    if (!query) return templates;
+    return templates.filter((template) =>
+      [template.name, template.slug, template.category, template.description]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(query)),
+    );
+  }, [templates, templateSearch]);
+
+  const [roleTemplateModalOpen, setRoleTemplateModalOpen] = useState(false);
+  const [allTemplates, setAllTemplates] = useState<Template[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [roleTemplatesLoading, setRoleTemplatesLoading] = useState(false);
+  const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
+  const [canManageRoleTemplates, setCanManageRoleTemplates] = useState(false);
 
   const userOptions = useMemo(() =>
     users.map((u) => ({
@@ -93,6 +111,12 @@ export default function SharingContentPage() {
         setCanCreate(merged.includes("create:sharingcontent"));
         setCanUpdate(merged.includes("update:sharingcontent"));
         setCanDelete(merged.includes("delete:sharingcontent"));
+        setCanManageRoleTemplates(
+          merged.includes("update:role") ||
+            merged.includes("read:role") ||
+            merged.includes("read:user:all") ||
+            merged.includes("create:role"),
+        );
         setCurrentUserId(data?.user?.id || "");
         if (isAdmin) {
           const usersRes = await userApi.list({ page: 1, limit: 100 }).catch(() => null);
@@ -133,6 +157,76 @@ export default function SharingContentPage() {
     loadTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initial data load only
   }, []);
+
+  const loadRoleTemplates = async () => {
+    setRoleTemplatesLoading(true);
+    try {
+      const [rolesRes, templatesRes] = await Promise.allSettled([
+        roleApi.list(),
+        templateApi.list(),
+      ]);
+
+      const roleList = rolesRes.status === "fulfilled" ? rolesRes.value.data?.data || [] : [];
+      if (roleList.length) setRoles(roleList);
+
+      let catalog =
+        templatesRes.status === "fulfilled" ? templatesRes.value.data?.data || [] : [];
+
+      // Fallback: build the catalog from templates already assigned to roles.
+      // This keeps the assignment table usable even if the catalog endpoint is
+      // unavailable for the current account.
+      if (!catalog.length) {
+        const map = new Map<string, Template>();
+        for (const role of roleList) {
+          for (const rt of role.templates || []) {
+            if (!map.has(rt.template.id)) map.set(rt.template.id, rt.template);
+          }
+        }
+        catalog = Array.from(map.values()).sort(
+          (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+        );
+      }
+      if (catalog.length) setAllTemplates(catalog);
+
+      if (rolesRes.status === "rejected" && templatesRes.status === "rejected") {
+        messageApi.error("Failed to load role templates (permission denied or server error)");
+      } else if (rolesRes.status === "rejected") {
+        messageApi.error("Failed to load roles for template assignments");
+      }
+    } finally {
+      setRoleTemplatesLoading(false);
+    }
+  };
+
+  const handleToggleRoleTemplate = async (role: Role, templateId: string, checked: boolean) => {
+    const currentIds = (role.templates || []).map((rt) => rt.template.id);
+    const nextIds = checked
+      ? Array.from(new Set([...currentIds, templateId]))
+      : currentIds.filter((id) => id !== templateId);
+    setSavingRoleId(role.id);
+    try {
+      await roleApi.update({ id: role.id, templateIds: nextIds });
+      setRoles((prev) =>
+        prev.map((r) =>
+          r.id === role.id
+            ? {
+                ...r,
+                templates: nextIds.map((id) => {
+                  const tpl = allTemplates.find((t) => t.id === id);
+                  return tpl ? { template: tpl } : null;
+                }).filter(Boolean) as { template: Template }[],
+              }
+            : r,
+        ),
+      );
+      messageApi.success(`Updated templates for ${role.name}`);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
+      messageApi.error(typeof msg === "string" ? msg : "Failed to update role templates");
+    } finally {
+      setSavingRoleId(null);
+    }
+  };
 
   const handleSelectTemplate = async (templateId: string) => {
     setSelectingTemplateId(templateId);
@@ -362,12 +456,24 @@ export default function SharingContentPage() {
         <Button
           icon={<AppstoreOutlined />}
           onClick={() => {
+            setTemplateSearch("");
             setTemplateModalOpen(true);
             loadTemplates();
           }}
         >
           Templates
         </Button>
+        {canManageRoleTemplates && (
+          <Button
+            icon={<TeamOutlined />}
+            onClick={() => {
+              setRoleTemplateModalOpen(true);
+              loadRoleTemplates();
+            }}
+          >
+            Role Templates
+          </Button>
+        )}
         <Button
           icon={<EyeOutlined />}
           disabled={!selectedTemplateId}
@@ -496,85 +602,188 @@ export default function SharingContentPage() {
         onCancel={() => setTemplateModalOpen(false)}
         footer={null}
         width={760}
-        style={{ maxWidth: "95vw" }}
+        centered
+        style={{ maxWidth: "calc(100vw - 24px)" }}
+        styles={{ body: { padding: 0 } }}
       >
-        <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
-          Select the template shown when someone taps your NFC card. Only templates
-          available to your role are listed.
-        </Typography.Paragraph>
-
-        {templatesLoading ? (
-          <div style={{ textAlign: "center", padding: 40 }}>
-            <Spin />
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: "calc(100dvh - 180px)",
+            minHeight: 0,
+          }}
+        >
+          <div style={{ padding: "16px clamp(12px, 4vw, 24px) 8px" }}>
+            <Typography.Paragraph type="secondary" style={{ marginTop: 0, marginBottom: 12 }}>
+              Select the template shown when someone taps your NFC card. Only templates
+              available to your role are listed.
+            </Typography.Paragraph>
+            <Input
+              allowClear
+              value={templateSearch}
+              onChange={(e) => setTemplateSearch(e.target.value)}
+              prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
+              placeholder="Search by name, category or description..."
+            />
+            {!templatesLoading && templates.length > 0 && (
+              <Typography.Text
+                type="secondary"
+                style={{ display: "block", marginTop: 8, fontSize: 12 }}
+              >
+                Showing {filteredTemplates.length} of {templates.length} templates
+              </Typography.Text>
+            )}
           </div>
-        ) : templates.length === 0 ? (
-          <Empty description="No templates available for your role" />
-        ) : (
+
           <div
             style={{
-              display: "grid",
-              gap: 12,
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              WebkitOverflowScrolling: "touch",
+              padding: "8px clamp(12px, 4vw, 24px) 16px",
             }}
           >
-            {templates.map((template) => {
-              const isSelected = template.id === selectedTemplateId;
-              return (
-                <div
-                  key={template.id}
-                  style={{
-                    position: "relative",
-                    border: isSelected ? "2px solid #1677ff" : "1px solid #d9d9d9",
-                    borderRadius: 12,
-                    padding: 16,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                    minHeight: 170,
-                  }}
-                >
-                  {isSelected && (
-                    <Tag color="blue" style={{ position: "absolute", top: 8, right: 8, margin: 0 }}>
-                      Selected
-                    </Tag>
-                  )}
-                  <Typography.Title level={5} style={{ margin: 0, paddingRight: 70 }}>
-                    {template.name}
-                  </Typography.Title>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    {template.category || "General"}
-                  </Typography.Text>
-                  <Typography.Paragraph
-                    type="secondary"
-                    style={{ fontSize: 12, margin: "4px 0 10px", flex: 1 }}
-                    ellipsis={{ rows: 3 }}
-                  >
-                    {template.description || "No description"}
-                  </Typography.Paragraph>
-                  <Button
-                    block
-                    type={isSelected ? "default" : "primary"}
-                    disabled={isSelected}
-                    loading={selectingTemplateId === template.id}
-                    onClick={() => handleSelectTemplate(template.id)}
-                  >
-                    {isSelected ? "Selected" : "Use this template"}
-                  </Button>
-                </div>
-              );
-            })}
+            {templatesLoading ? (
+              <div style={{ textAlign: "center", padding: 40 }}>
+                <Spin />
+              </div>
+            ) : templates.length === 0 ? (
+              <Empty description="No templates available for your role" />
+            ) : filteredTemplates.length === 0 ? (
+              <Empty description="No templates match your search" />
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gap: 12,
+                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                }}
+              >
+                {filteredTemplates.map((template) => {
+                  const isSelected = template.id === selectedTemplateId;
+                  return (
+                    <div
+                      key={template.id}
+                      style={{
+                        position: "relative",
+                        border: isSelected ? "2px solid #1677ff" : "1px solid #d9d9d9",
+                        borderRadius: 12,
+                        padding: 16,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                        minHeight: 170,
+                      }}
+                    >
+                      {isSelected && (
+                        <Tag color="blue" style={{ position: "absolute", top: 8, right: 8, margin: 0 }}>
+                          Selected
+                        </Tag>
+                      )}
+                      <Typography.Title level={5} style={{ margin: 0, paddingRight: 70 }}>
+                        {template.name}
+                      </Typography.Title>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        {template.category || "General"}
+                      </Typography.Text>
+                      <Typography.Paragraph
+                        type="secondary"
+                        style={{ fontSize: 12, margin: "4px 0 10px", flex: 1 }}
+                        ellipsis={{ rows: 3 }}
+                      >
+                        {template.description || "No description"}
+                      </Typography.Paragraph>
+                      <Button
+                        block
+                        type={isSelected ? "default" : "primary"}
+                        disabled={isSelected}
+                        loading={selectingTemplateId === template.id}
+                        onClick={() => handleSelectTemplate(template.id)}
+                      >
+                        {isSelected ? "Selected" : "Use this template"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
 
-        <div style={{ marginTop: 16, textAlign: "right" }}>
-          <Button
-            icon={<EyeOutlined />}
-            disabled={!selectedTemplateId}
-            onClick={handlePreview}
+          <div
+            style={{
+              padding: "12px clamp(12px, 4vw, 24px)",
+              borderTop: "1px solid rgba(5, 5, 5, 0.06)",
+              textAlign: "right",
+            }}
           >
-            Preview selected
-          </Button>
+            <Button
+              icon={<EyeOutlined />}
+              disabled={!selectedTemplateId}
+              onClick={handlePreview}
+            >
+              Preview selected
+            </Button>
+          </div>
         </div>
+      </Modal>
+
+      <Modal
+        title={<span><TeamOutlined /> Role ↔ Template assignments</span>}
+        open={roleTemplateModalOpen}
+        onCancel={() => setRoleTemplateModalOpen(false)}
+        footer={null}
+        width={1000}
+        style={{ maxWidth: "98vw" }}
+      >
+        <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+          Check which templates each role can use. Tick/untick to assign; changes save immediately.
+        </Typography.Paragraph>
+        {roleTemplatesLoading ? (
+          <div style={{ textAlign: "center", padding: 40 }}><Spin /></div>
+        ) : (
+          <Table
+            rowKey="id"
+            dataSource={roles}
+            pagination={false}
+            scroll={{ x: "max-content" }}
+            columns={[
+              {
+                title: "Role",
+                dataIndex: "name",
+                key: "name",
+                fixed: "left",
+                render: (name: string) => <Tag color="blue">{name}</Tag>,
+              },
+              ...allTemplates.map((tpl) => ({
+                title: (
+                  <div style={{ textAlign: "center", minWidth: 90 }}>
+                    <div>{tpl.name}</div>
+                    <Typography.Text type="secondary" style={{ fontSize: 11 }}>{tpl.slug}</Typography.Text>
+                  </div>
+                ),
+                key: tpl.id,
+                align: "center" as const,
+                render: (_: unknown, role: Role) => {
+                  const checked = (role.templates || []).some((rt) => rt.template.id === tpl.id);
+                  return (
+                    <Checkbox
+                      checked={checked}
+                      disabled={savingRoleId === role.id}
+                      onChange={(e) => handleToggleRoleTemplate(role, tpl.id, e.target.checked)}
+                    />
+                  );
+                },
+              })),
+              {
+                title: "Allowed",
+                key: "count",
+                render: (_: unknown, role: Role) => (role.templates || []).length,
+              },
+            ]}
+          />
+        )}
       </Modal>
     </>
   );

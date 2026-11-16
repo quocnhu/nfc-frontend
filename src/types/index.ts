@@ -37,6 +37,7 @@ export interface Role {
   name: string;
   isActive?: boolean;
   permissions?: Permission[];
+  templates?: { template: Template }[];
   createdAt: string;
   updatedAt: string;
 }

@@ -23,7 +23,7 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/components/providers/AntdProvider";
 import { useAvatar } from "@/components/providers/AvatarProvider";
@@ -216,6 +216,14 @@ export function DashboardShell({
   const [permissionsError, setPermissionsError] = useState(false);
   const [permissionsRetry, setPermissionsRetry] = useState(0);
 
+  // Keep the last known access snapshot so a failed live refresh (backend cold
+  // start, timeout, transient 5xx) does not blank the sidebar and replace it
+  // with an error. Only show the error when we have never had access data.
+  const liveAccessRef = useRef(liveAccess);
+  useEffect(() => {
+    liveAccessRef.current = liveAccess;
+  }, [liveAccess]);
+
   useEffect(() => {
     if (!session?.user) return;
     let active = true;
@@ -224,18 +232,45 @@ export function DashboardShell({
       .then((res) => {
         const d = res.data?.data;
         if (!active) return;
-        setLiveAccess({
+        const nextAccess = {
           role: d?.role,
           permissions: d?.mergedPermissions || [],
           createdBy: d?.user?.createdBy || null,
           needsUpgrade: d?.needsUpgrade,
-        });
+        };
+        setLiveAccess(nextAccess);
+        liveAccessRef.current = nextAccess;
         setPermissionsError(false);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!active) return;
-        setLiveAccess(null);
-        setPermissionsError(true);
+
+        // Last-resort fallback: the session already carries role/permissions
+        // from login, so the sidebar can still render instead of failing.
+        let fallback = liveAccessRef.current;
+        if (!fallback && session?.user) {
+          fallback = {
+            role: session.user.role,
+            permissions: session.user.permissions ?? [],
+            createdBy: session.user.createdBy ?? null,
+            needsUpgrade: false,
+          };
+        }
+        if (fallback) {
+          setLiveAccess(fallback);
+          liveAccessRef.current = fallback;
+          setPermissionsError(false);
+        } else {
+          setPermissionsError(true);
+        }
+
+        if (process.env.NODE_ENV !== "production") {
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          console.error(
+            `[DashboardShell] permissions fetch failed${status ? ` (${status})` : ""}:`,
+            err,
+          );
+        }
       });
     return () => {
       active = false;

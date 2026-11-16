@@ -40,6 +40,7 @@ export function WelcomeBot() {
   const [vi, setVi] = useState("");
   const [en, setEn] = useState("");
   const [caret, setCaret] = useState<"vi" | "en" | null>(null);
+  const [hidden, setHidden] = useState(false);
   const idxRef = useRef(0);
   const talkingRef = useRef(false);
   const typerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -115,6 +116,7 @@ export function WelcomeBot() {
   }, [say]);
 
   useEffect(() => {
+    if (hidden) return;
     let disposed = false;
     let raf = 0;
     let cleanup: (() => void) | undefined;
@@ -312,29 +314,53 @@ export function WelcomeBot() {
       disposed = true;
       cleanup?.();
     };
-  }, [next]);
+  }, [next, hidden]);
 
   return (
-    <div className="welcome-bot-widget">
-      <div
-        className="welcome-bot-bubble"
-        role="button"
-        tabIndex={0}
-        aria-live="polite"
-        aria-label="Next message"
-        onClick={next}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            next();
-          }
-        }}
-      >
-        <p className={`welcome-bot-vi${caret === "vi" ? " caret" : ""}`}>{vi}</p>
-        <p className={`welcome-bot-en${caret === "en" ? " caret" : ""}`}>{en}</p>
-        <p className="welcome-bot-hint">Click the bot or this bubble for the next message.</p>
-      </div>
-      <div ref={stageRef} className="welcome-bot-stage" />
+    <>
+      {hidden ? (
+        <button
+          type="button"
+          className="welcome-bot-launcher"
+          aria-label="Show welcome bot"
+          onClick={() => setHidden(false)}
+        >
+          Bot
+        </button>
+      ) : (
+        <div className="welcome-bot-widget">
+          <div
+            className="welcome-bot-bubble"
+            role="button"
+            tabIndex={0}
+            aria-live="polite"
+            aria-label="Next message"
+            onClick={next}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                next();
+              }
+            }}
+          >
+            <button
+              type="button"
+              className="welcome-bot-close"
+              aria-label="Hide welcome bot"
+              onClick={(e) => {
+                e.stopPropagation();
+                setHidden(true);
+              }}
+            >
+              ×
+            </button>
+            <p className={`welcome-bot-vi${caret === "vi" ? " caret" : ""}`}>{vi}</p>
+            <p className={`welcome-bot-en${caret === "en" ? " caret" : ""}`}>{en}</p>
+            <p className="welcome-bot-hint">Click the bot or this bubble for the next message.</p>
+          </div>
+          <div ref={stageRef} className="welcome-bot-stage" />
+        </div>
+      )}
       <style>{`
         .welcome-bot-widget{position:fixed;right:16px;bottom:16px;z-index:150;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:calc(100vw - 24px)}
         .welcome-bot-stage{width:200px;height:240px;flex:none;cursor:pointer}
@@ -345,6 +371,10 @@ export function WelcomeBot() {
         .welcome-bot-vi{margin:0 0 6px;font-weight:800;font-size:clamp(19px,4.4vw,25px);line-height:1.25;color:#b3201f}
         .welcome-bot-en{margin:0;font-size:clamp(15px,3.4vw,18px);line-height:1.5;min-height:2.6em;max-width:46ch}
         .welcome-bot-hint{margin:10px 0 0;font-size:12px;line-height:1.4;opacity:.72}
+        .welcome-bot-close{position:absolute;top:8px;right:8px;width:26px;height:26px;border:none;border-radius:50%;background:rgba(179,32,31,.12);color:#b3201f;font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+        .welcome-bot-close:hover{background:rgba(179,32,31,.22)}
+        .welcome-bot-launcher{position:fixed;right:16px;bottom:16px;z-index:150;border:2px solid #b3201f;background:#fff8e6;color:#b3201f;border-radius:999px;padding:10px 14px;font-weight:700;cursor:pointer;box-shadow:4px 4px 0 #b3201f;font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif}
+        .welcome-bot-launcher:hover{transform:translateY(-1px)}
         .welcome-bot-vi.caret::after,.welcome-bot-en.caret::after{content:"";display:inline-block;width:2px;height:1em;background:currentColor;margin-left:2px;vertical-align:-2px;animation:welcomeBotBlink 1s steps(2) infinite}
         @keyframes welcomeBotBlink{50%{opacity:0}}
         @media (max-width:640px){
@@ -353,9 +383,10 @@ export function WelcomeBot() {
           .welcome-bot-bubble{width:min(320px,86vw);padding:13px 16px 15px}
           .welcome-bot-bubble::before{right:52px}
           .welcome-bot-bubble::after{right:56px}
+          .welcome-bot-launcher{right:10px;bottom:10px}
         }
         @media (prefers-reduced-motion:reduce){.welcome-bot-vi.caret::after,.welcome-bot-en.caret::after{animation:none}}
       `}</style>
-    </div>
+    </>
   );
 }

@@ -140,7 +140,10 @@ api.interceptors.response.use(
           err.response.data
         );
       } else {
-        console.error("[API Error] Network error:", err.message);
+        console.error(
+          `[API Error] Network error on ${err.config?.method?.toUpperCase()} ${err.config?.url}:`,
+          err.message
+        );
       }
     }
     return Promise.reject(err);

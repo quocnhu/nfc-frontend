@@ -9,9 +9,8 @@ import RealEstateTemplate from '@/components/templates/RealEstateTemplate';
 import AccountingTemplate from '@/components/templates/AccountingTemplate';
 import LogisticsTemplate from '@/components/templates/LogisticsTemplate';
 import ItDevopsTemplate from '@/components/templates/ItDevopsTemplate';
-import TourGuideTemplate from '@/components/templates/TourGuideTemplate';
 import Tourguide1Template from '@/components/templates/Tourguide1Template';
-import Tourguide2Template from '@/components/templates/Tourguide2Template';
+import TourGuideTemplate from '@/components/templates/TourGuideTemplate';
 import DriverTemplate from '@/components/templates/DriverTemplate';
 import ItTemplate from '@/components/templates/ItTemplate';
 import SpeakerTemplate from '@/components/templates/SpeakerTemplate';
@@ -162,16 +161,12 @@ function PublicUserPageContent() {
     return <ItDevopsTemplate user={user} items={items} />;
   }
 
-  if (componentKey === 'TourGuideTemplate') {
-    return <TourGuideTemplate user={user} items={items} />;
-  }
-
   if (componentKey === 'Tourguide1Template') {
     return <Tourguide1Template user={user} items={items} />;
   }
 
-  if (componentKey === 'Tourguide2Template') {
-    return <Tourguide2Template user={user} items={items} />;
+  if (componentKey === 'TourGuideTemplate') {
+    return <TourGuideTemplate user={user} items={items} />;
   }
 
   if (componentKey === 'DriverTemplate') {

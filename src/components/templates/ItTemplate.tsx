@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import ItDevopsTemplate from "./ItDevopsTemplate";
+import ITDevopTourismTemplate from "./ITDevopTourismTemplate";
 import { TemplateProps } from "./template-utils";
 
 /**
@@ -10,5 +10,5 @@ import { TemplateProps } from "./template-utils";
  * mode switch so it behaves as a standalone template.
  */
 export default function ItTemplate({ user, items }: TemplateProps) {
-  return <ItDevopsTemplate user={user} items={items} initialMode="dev" hideModeSwitch />;
+  return <ITDevopTourismTemplate user={user} items={items} initialMode="dev" hideModeSwitch />;
 }

@@ -8,7 +8,7 @@ import VipTemplate from '@/components/templates/VipTemplate';
 import RealEstateTemplate from '@/components/templates/RealEstateTemplate';
 import AccountingTemplate from '@/components/templates/AccountingTemplate';
 import LogisticsTemplate from '@/components/templates/LogisticsTemplate';
-import ItDevopsTemplate from '@/components/templates/ItDevopsTemplate';
+import ITDevopTourismTemplate from '@/components/templates/ITDevopTourismTemplate';
 import Tourguide1Template from '@/components/templates/Tourguide1Template';
 import TourGuideTemplate from '@/components/templates/TourGuideTemplate';
 import DriverTemplate from '@/components/templates/DriverTemplate';
@@ -145,20 +145,8 @@ function PublicUserPageContent() {
   const roleName = data.role?.name?.toUpperCase();
   const componentKey = data.template?.componentKey;
 
-  if (componentKey === 'RealEstateTemplate') {
-    return <RealEstateTemplate user={user} items={items} />;
-  }
-
-  if (componentKey === 'AccountingTemplate') {
-    return <AccountingTemplate user={user} items={items} />;
-  }
-
-  if (componentKey === 'LogisticsTemplate') {
-    return <LogisticsTemplate user={user} items={items} />;
-  }
-
-  if (componentKey === 'ItDevopsTemplate') {
-    return <ItDevopsTemplate user={user} items={items} />;
+  if (componentKey === 'ITDevopTourismTemplate' || componentKey === 'ItDevopsTemplate') {
+    return <ITDevopTourismTemplate user={user} items={items} />;
   }
 
   if (componentKey === 'Tourguide1Template') {
@@ -189,7 +177,18 @@ function PublicUserPageContent() {
     return <UserTemplate user={user} items={items} />;
   }
 
-  // Fallback for users without a resolved template: keep the role-based default.
+  if (componentKey === 'RealEstateTemplate') {
+    return <RealEstateTemplate user={user} items={items} />;
+  }
+
+  if (componentKey === 'AccountingTemplate') {
+    return <AccountingTemplate user={user} items={items} />;
+  }
+
+  if (componentKey === 'LogisticsTemplate') {
+    return <LogisticsTemplate user={user} items={items} />;
+  }
+
   if (roleName === 'ADMIN' || roleName === 'LOCAL' || roleName === 'VIP') {
     return <RealEstateTemplate user={user} items={items} />;
   }

@@ -365,8 +365,8 @@ export function WelcomeBot() {
         .welcome-bot-widget{position:fixed;right:16px;bottom:16px;z-index:150;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:calc(100vw - 24px)}
         .welcome-bot-stage{width:200px;height:240px;flex:none;cursor:pointer}
         .welcome-bot-stage canvas{display:block;width:100%;height:100%}
-        .welcome-bot-bubble{position:relative;width:min(340px,82vw);background:#fff8e6;color:#3a1410;border:3px solid #b3201f;border-radius:22px;padding:16px 20px 18px;box-shadow:6px 6px 0 #b3201f;cursor:pointer;font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif}
-        .welcome-bot-bubble::before{content:"";position:absolute;right:64px;bottom:-18px;border-left:14px solid transparent;border-right:14px solid transparent;border-top:18px solid #b3201f}
+        .welcome-bot-bubble{position:relative;width:min(340px,82vw);background:#fff8e6;color:#3a1410;border:2px solid #ff9f1c;border-radius:22px;padding:16px 20px 18px;box-shadow:5px 5px 0 #ff9f1c;cursor:pointer;font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif}
+        .welcome-bot-bubble::before{content:"";position:absolute;right:64px;bottom:-18px;border-left:14px solid transparent;border-right:14px solid transparent;border-top:18px solid #ff9f1c}
         .welcome-bot-bubble::after{content:"";position:absolute;right:68px;bottom:-13px;border-left:10px solid transparent;border-right:10px solid transparent;border-top:14px solid #fff8e6}
         .welcome-bot-vi{margin:0 0 6px;font-weight:800;font-size:clamp(19px,4.4vw,25px);line-height:1.25;color:#b3201f}
         .welcome-bot-en{margin:0;font-size:clamp(15px,3.4vw,18px);line-height:1.5;min-height:2.6em;max-width:46ch}
@@ -378,12 +378,22 @@ export function WelcomeBot() {
         .welcome-bot-vi.caret::after,.welcome-bot-en.caret::after{content:"";display:inline-block;width:2px;height:1em;background:currentColor;margin-left:2px;vertical-align:-2px;animation:welcomeBotBlink 1s steps(2) infinite}
         @keyframes welcomeBotBlink{50%{opacity:0}}
         @media (max-width:640px){
-          .welcome-bot-widget{right:10px;bottom:10px;gap:6px}
-          .welcome-bot-stage{width:140px;height:170px}
-          .welcome-bot-bubble{width:min(320px,86vw);padding:13px 16px 15px}
-          .welcome-bot-bubble::before{right:52px}
-          .welcome-bot-bubble::after{right:56px}
-          .welcome-bot-launcher{right:10px;bottom:10px}
+          .welcome-bot-widget{right:8px;bottom:8px;gap:4px}
+          .welcome-bot-stage{width:112px;height:136px}
+          .welcome-bot-bubble{width:min(270px,78vw);padding:10px 12px 12px;border-radius:16px}
+          .welcome-bot-bubble::before{right:38px}
+          .welcome-bot-bubble::after{right:42px}
+          .welcome-bot-vi{font-size:clamp(15px,3.8vw,18px)}
+          .welcome-bot-en{font-size:clamp(12px,3vw,14px);min-height:2.2em}
+          .welcome-bot-hint{margin-top:6px;font-size:10px}
+          .welcome-bot-close{top:6px;right:6px;width:24px;height:24px;font-size:16px}
+          .welcome-bot-launcher{right:8px;bottom:8px;padding:8px 12px;font-size:14px}
+        }
+        @media (max-width:380px){
+          .welcome-bot-stage{width:92px;height:112px}
+          .welcome-bot-bubble{width:min(230px,82vw);padding:8px 10px 10px}
+          .welcome-bot-vi{font-size:14px}
+          .welcome-bot-en{font-size:12px}
         }
         @media (prefers-reduced-motion:reduce){.welcome-bot-vi.caret::after,.welcome-bot-en.caret::after{animation:none}}
       `}</style>

@@ -240,12 +240,21 @@ const UI: Record<
 };
 
 const AV: Record<Mode, string> = {
-  guide: `<svg viewBox="0 0 100 100" role="img" aria-label="Avatar hướng dẫn viên"><defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6fd8ff"/><stop offset="1" stop-color="#2ee0c0"/></linearGradient></defs>
-<rect width="100" height="100" fill="url(#ag)"/><path d="M14 100c2-20 16-30 36-30s34 10 36 30z" fill="#ff6b3d"/><path d="M42 72l8 10 8-10z" fill="#fff"/>
-<rect x="44" y="60" width="12" height="14" rx="5" fill="#f0c4a0"/><circle cx="50" cy="46" r="21" fill="#f6cfae"/>
-<path d="M27 42a23 20 0 0 1 46 0z" fill="#ffc83d"/><rect x="22" y="40" width="56" height="6" rx="3" fill="#ffb21f"/><rect x="27" y="35" width="46" height="4" fill="#e5483a"/>
-<circle cx="42" cy="52" r="2.6" fill="#2a1a12"/><circle cx="58" cy="52" r="2.6" fill="#2a1a12"/><path d="M43 60q7 6 14 0" fill="none" stroke="#2a1a12" stroke-width="2.4" stroke-linecap="round"/>
-<circle cx="37" cy="58" r="3.4" fill="#ff9c8a" opacity=".7"/><circle cx="63" cy="58" r="3.4" fill="#ff9c8a" opacity=".7"/></svg>`,
+  guide: `<svg viewBox="0 0 100 100" role="img" aria-label="Avatar robot bị lỗi"><defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9fd8ff"/><stop offset="1" stop-color="#7a8fa6"/></linearGradient></defs>
+<rect width="100" height="100" fill="url(#ag)"/>
+<path d="M30 86h40" stroke="#3a4a55" stroke-width="5" stroke-linecap="round"/>
+<rect x="22" y="28" width="56" height="48" rx="14" fill="#e8eef2" stroke="#3a4a55" stroke-width="3"/>
+<path d="M23 50h54" stroke="#c3ced6" stroke-width="2"/>
+<path d="M50 29l-7 16 9 5-8 13" fill="none" stroke="#9aa8b2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M34 31V19" stroke="#3a4a55" stroke-width="3" stroke-linecap="round"/><circle cx="34" cy="17" r="4.5" fill="#ff9f1c"/>
+<rect x="15" y="45" width="7" height="16" rx="3.5" fill="#ff9f1c"/><rect x="78" y="45" width="7" height="16" rx="3.5" fill="#ff9f1c"/>
+<circle cx="39" cy="45" r="8" fill="#23313b"/><path d="M35 41l8 8M43 41l-8 8" stroke="#ff9f1c" stroke-width="2.2" stroke-linecap="round"/>
+<circle cx="61" cy="45" r="8" fill="#23313b"/><circle cx="61" cy="45" r="2.6" fill="#7cf7ff"/>
+<path d="M38 64h24" stroke="#3a4a55" stroke-width="3" stroke-linecap="round"/>
+<path d="M60 65l6 10-4 6" fill="none" stroke="#9aa8b2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M62 62l9 5" stroke="#ff9f1c" stroke-width="2" stroke-linecap="round"/>
+<circle cx="74" cy="72" r="2.5" fill="#ffc83d"/><circle cx="80" cy="68" r="1.8" fill="#ff9f1c"/>
+</svg>`,
   dev: `<svg viewBox="0 0 100 100" role="img" aria-label="Avatar DevOps"><defs><linearGradient id="ag2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a5cff"/><stop offset="1" stop-color="#1fd1e0"/></linearGradient></defs>
 <rect width="100" height="100" fill="url(#ag2)"/><path d="M12 100c2-22 16-32 38-32s36 10 38 32z" fill="#3f319f"/><path d="M36 70q14 12 28 0l-2-6H38z" fill="#2b2170"/>
 <rect x="44" y="60" width="12" height="12" rx="5" fill="#f0c4a0"/><circle cx="50" cy="46" r="21" fill="#f6cfae"/>

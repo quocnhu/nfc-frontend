@@ -39,6 +39,20 @@ const DEFAULT_SLIDESHOW = [
 
 const DEFAULT_TOUR_GUIDE_IMG = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80";
 
+const FALLBACK_AVATAR = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0ea5e9"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs>
+<rect width="100" height="100" fill="url(#g)"/>
+<rect x="21" y="29" width="58" height="46" rx="14" fill="#e2e8f0" stroke="#334155" stroke-width="3"/>
+<path d="M52 30l-8 15 10 5-9 14" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M34 30V18" stroke="#334155" stroke-width="3" stroke-linecap="round"/><circle cx="34" cy="16" r="4.5" fill="#ff9f1c"/>
+<rect x="14" y="46" width="7" height="16" rx="3.5" fill="#ff9f1c"/><rect x="79" y="46" width="7" height="16" rx="3.5" fill="#ff9f1c"/>
+<circle cx="39" cy="46" r="8" fill="#1e293b"/><path d="M35 42l8 8M43 42l-8 8" stroke="#ff9f1c" stroke-width="2.2" stroke-linecap="round"/>
+<circle cx="61" cy="46" r="8" fill="#1e293b"/><circle cx="61" cy="46" r="2.6" fill="#7cf7ff"/>
+<path d="M39 64h22" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+<path d="M61 65l6 10-4 6" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="76" cy="74" r="2.5" fill="#facc15"/><circle cx="82" cy="70" r="1.8" fill="#ff9f1c"/>
+</svg>`)}`;
+
 const TOUR_GUIDE_DATA = [
   { icon: <CustomerServiceOutlined />, title: "Tour Guide", desc: "Leading guests through cultural landmarks, historical sites, and natural wonders with engaging storytelling." },
   { icon: <DesktopOutlined />, title: "Tour Operator", desc: "Planning itineraries, coordinating logistics, and ensuring seamless travel experiences for groups of all sizes." },
@@ -548,7 +562,7 @@ export default function HomePage() {
             <div style={{ position: "absolute", inset: -48, borderRadius: "50%", border: "1px solid #00d4ff18", animation: "halo 3s ease-in-out infinite 1.2s" }} />
             <Avatar
               size={120}
-              src={homepageAvatar || user?.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=QuocNhu&backgroundColor=667eea"}
+              src={homepageAvatar || user?.image || FALLBACK_AVATAR}
               style={{
                 border: "4px solid #667eea",
                 boxShadow: "0 0 40px rgba(96, 165, 250, 0.35), 0 0 80px rgba(14, 165, 233, 0.2)",
